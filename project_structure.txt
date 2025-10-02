@@ -1,0 +1,41 @@
+C:\Users\Admin Howzer AI\projects\hash
+├── public
+├── src
+│   ├── ai
+│   │   ├── bloomMapper.js
+│   │   ├── modelLoader.js
+│   │   └── textAnalyzer.js
+│   ├── components
+│   │   ├── BloomCanvas.jsx
+│   │   ├── ControlPanel.jsx
+│   │   ├── ExportButton.jsx
+│   │   ├── LoadingState.jsx
+│   │   └── TextInput.jsx
+│   ├── hooks
+│   │   ├── useTextAnalysis.js
+│   │   └── useThreeScene.js
+│   ├── three
+│   │   ├── shaders
+│   │   │   ├── bloomFragment.glsl
+│   │   │   └── bloomVertex.glsl
+│   │   ├── BloomGenerator.jsx
+│   │   ├── EnergyParticles.jsx
+│   │   └── NeuralBloomScene.jsx
+│   ├── utils
+│   │   ├── colorPalettes.js
+│   │   ├── mathHelpers.js
+│   │   └── storageManager.js
+│   ├── App.jsx
+│   ├── index.css
+│   └── main.jsx
+├── .env.example
+├── .gitignore
+├── index.html
+├── package-lock.json
+├── package.json
+├── postcss.config.js
+├── README.md
+├── tailwind.config.js
+├── tree.txt
+├── tree_dump.py
+└── vite.config.js
