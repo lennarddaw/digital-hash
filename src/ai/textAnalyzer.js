@@ -79,11 +79,59 @@ export async function analyzeText(text) {
     // -------- Modelle (Sentiment + Embedding) --------
     const truncatedText = text.slice(0, 2000)
 
-    // Sentiment
-    const sentimentResult = await sentimentModel(truncatedText)
-    const sentiment = sentimentResult?.[0] || { label: 'NEUTRAL', score: 0.5 }
+    // ===== Calibrated, sentence-level sentiment (mit Neutralfenster) =====
+    const rawSentences = text
+      .split(/(?<=[.!?]{1,3})\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
 
-    // Embedding
+    const MAX_SENTS = 60
+    const sents = rawSentences.slice(0, MAX_SENTS).map((s) => s.slice(0, 400))
+
+    let signedScores = []
+    if (sents.length > 0) {
+      const BATCH = 16
+      for (let i = 0; i < sents.length; i += BATCH) {
+        const chunk = sents.slice(i, i + BATCH)
+        const chunkRes = await sentimentModel(chunk)
+        for (const r of chunkRes) {
+          const lbl = String(r?.label || '').toUpperCase()
+          const isNeg = lbl.includes('NEG')
+          const isPos = lbl.includes('POS')
+          const score = typeof r?.score === 'number' ? r.score : 0.5
+          // Binärmodell → mappe auf [-1, +1]
+          signedScores.push(isNeg ? -score : isPos ? +score : 0)
+        }
+      }
+    } else {
+      const one = await sentimentModel(truncatedText)
+      const r = Array.isArray(one) ? one[0] : one
+      const lbl = String(r?.label || '').toUpperCase()
+      const isNeg = lbl.includes('NEG')
+      const isPos = lbl.includes('POS')
+      const score = typeof r?.score === 'number' ? r.score : 0.5
+      signedScores = [isNeg ? -score : isPos ? +score : 0]
+    }
+
+    const meanSigned =
+      signedScores.length > 0
+        ? signedScores.reduce((a, b) => a + b, 0) / signedScores.length
+        : 0
+
+    // Neutralfenster dämpft Extremwerte (|x| <= margin ⇒ NEUTRAL)
+    const NEUTRAL_MARGIN = 0.15
+    let aggLabel = 'NEUTRAL'
+    if (meanSigned > NEUTRAL_MARGIN) aggLabel = 'POSITIVE'
+    else if (meanSigned < -NEUTRAL_MARGIN) aggLabel = 'NEGATIVE'
+
+    // Gedämpfter 0..1-Score
+    const calibratedScore = clamp01(
+      (Math.abs(meanSigned) - NEUTRAL_MARGIN) / (1 - NEUTRAL_MARGIN)
+    )
+
+    const sentiment = { label: aggLabel, score: calibratedScore }
+
+    // ===== Embedding wie gehabt =====
     const embeddingResult = await embeddingModel(truncatedText, {
       pooling: 'mean',
       normalize: true,
@@ -104,9 +152,6 @@ export async function analyzeText(text) {
     const topicHash = topicSlice
       .map((v, i) => Math.abs(Math.floor((v + 1) * 1000 + i * 97)) % 997)
       .reduce((a, b) => (a * 131 + b) % 2147483647, 7)
-
-    // Debug (optional)
-    // console.log('Analysis complete:', { sentiment, dim: embedding.length, stats, topicHash, emotionHints })
 
     return {
       embedding,
@@ -158,4 +203,10 @@ export async function analyzeText(text) {
       },
     }
   }
+}
+
+/* ------------------ helpers ------------------ */
+function clamp01(x) {
+  if (!Number.isFinite(x)) return 0
+  return Math.max(0, Math.min(1, x))
 }
