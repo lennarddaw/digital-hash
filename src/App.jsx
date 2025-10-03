@@ -24,9 +24,9 @@ export default function App() {
       {/* UI Overlay */}
       <div className="absolute inset-0 pointer-events-none">
         <div className="pointer-events-auto p-8 max-w-2xl">
-          <h1 className="text-4xl font-bold mb-2 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
-            Neural Bloom
-          </h1>
+          <h1 className="text-4xl font-bold mb-2 text-white">
+  Hash
+</h1>
           <p className="text-gray-400 mb-6">
             Transform your thoughts into living structures
           </p>
@@ -43,9 +43,6 @@ export default function App() {
           {/* Legende / Metriken – nur anzeigen, wenn Daten vorhanden sind */}
           {hasBloom && (
             <div className="pointer-events-auto p-4 mt-4 bg-white/5 border border-white/10 rounded-lg backdrop-blur-sm">
-              <div className="text-xs uppercase tracking-wide text-gray-400 mb-2">
-                Mapping · alles hat Bedeutung
-              </div>
 
               <div className="text-sm text-gray-200 grid grid-cols-2 gap-x-6 gap-y-2">
                 <div>
@@ -58,57 +55,45 @@ export default function App() {
                   )}
                 </div>
                 <div>
-                  <span className="text-gray-400">Wörter:</span>{' '}
+                  <span className="text-gray-400">Words:</span>{' '}
                   <span className="font-medium">{meta?.wordCount ?? '—'}</span>
                 </div>
 
                 <div>
-                  <span className="text-gray-400">Äste (#Sätze):</span>{' '}
+                  <span className="text-gray-400">Branches (#Sentences):</span>{' '}
                   <span className="font-medium">{struct?.branches ?? '—'}</span>
                 </div>
                 <div>
-                  <span className="text-gray-400">Komplexität:</span>{' '}
+                  <span className="text-gray-400">Complexity:</span>{' '}
                   <span className="font-medium">{struct?.complexity ?? '—'}</span>
                 </div>
 
                 <div>
-                  <span className="text-gray-400">Symmetrie (TTR):</span>{' '}
+                  <span className="text-gray-400">Symmetry:</span>{' '}
                   <span className="font-medium">
                     {typeof struct?.symmetry === 'number' ? struct.symmetry.toFixed(2) : '—'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400">Winkel (°):</span>{' '}
+                  <span className="text-gray-400">Angle (°):</span>{' '}
                   <span className="font-medium">
                     {typeof struct?.angle === 'number' ? struct.angle.toFixed(1) : '—'}
                   </span>
                 </div>
 
                 <div>
-                  <span className="text-gray-400">Frage-Intensität:</span>{' '}
+                  <span className="text-gray-400">Question Score:</span>{' '}
                   <span className="font-medium">
                     {typeof meta?.questionScore === 'number' ? meta.questionScore.toFixed(2) : '—'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-gray-400">Betonung:</span>{' '}
+                  <span className="text-gray-400">Emphasis:</span>{' '}
                   <span className="font-medium">
                     {typeof meta?.emphasisScore === 'number' ? meta.emphasisScore.toFixed(2) : '—'}
                   </span>
                 </div>
               </div>
-
-              {/* kleine Mapping-Notizen */}
-              {meta?.mappingNotes && (
-                <div className="mt-3 text-xs text-gray-400 grid grid-cols-2 gap-2 leading-relaxed">
-                  <div>Äste: {meta.mappingNotes.branches}</div>
-                  <div>Komplexität: {meta.mappingNotes.complexity}</div>
-                  <div>Symmetrie: {meta.mappingNotes.symmetry}</div>
-                  <div>Winkel: {meta.mappingNotes.angle}</div>
-                  <div>Farbe: {meta.mappingNotes.color}</div>
-                  <div>Energie: {meta.mappingNotes.energy}</div>
-                </div>
-              )}
             </div>
           )}
         </div>

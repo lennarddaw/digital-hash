@@ -17,10 +17,6 @@ function InspectPanel({ target, onClose }) {
       </div>
       {mapping && (
         <div className="mt-3 text-xs text-gray-400">
-          <div className="font-semibold mb-1">Warum so / warum dort?</div>
-          <ul className="list-disc ml-5 space-y-1">
-            {mapping.map((m, i) => <li key={i}>{m}</li>)}
-          </ul>
         </div>
       )}
       <button

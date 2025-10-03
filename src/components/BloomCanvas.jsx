@@ -20,7 +20,7 @@ export default function BloomCanvas({ bloomData, onInspect }) {
       camera={{ position: [0, 0, 15], fov: 45 }}
       gl={{ antialias: true, alpha: true }}
     >
-      <color attach="background" args={['#0a0e27']} />
+      <color attach="background" args={['#000000']} />
 
       <ambientLight intensity={0.2} />
       <pointLight position={[10, 10, 10]} intensity={0.5} />
