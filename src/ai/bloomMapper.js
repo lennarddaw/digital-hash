@@ -1,6 +1,14 @@
 // src/ai/bloomMapper.js
 // Mapping: Analysen -> Visual-Parameter (global + pro Satz/Token)
-import { sentimentToColor } from '../utils/colorPalettes'
+// Neu: Mehrfarben-Konzept via HSL (Hue=Thema, Sat=Salience, Light=Valenz)
+import {
+  sentimentToColor,
+  hslToHex,
+  wrapHue,
+  clamp01,
+  typeHueBias,
+  EMOTION_TINTS,
+} from '../utils/colorPalettes'
 
 export function mapToBloomData(analysisResult) {
   if (!analysisResult) return null
@@ -56,58 +64,115 @@ export function mapToBloomData(analysisResult) {
     sentiment?.label === 'POSITIVE' ? 1 : sentiment?.label === 'NEGATIVE' ? -1 : 0
   const count = clamp(Math.round(wordCount * 2), 50, 400)
 
+  // Rückwärtskompatible "Basisfarbe" (z. B. für Link-Material)
   const color = sentimentToColor(sentiment, hints?.emotionHints)
 
+  // ---------- NEU: Hue-Konzept pro Satz ----------
+  // Satz-Hue deterministisch aus Embedding + Satzindex (Themenwechsel → Farbwechsel)
+  const hueForSentence = (sIndex) => {
+    const a = embedding[0] ?? 0
+    const b = embedding[1] ?? 0
+    const c = embedding[2] ?? 0
+    // Projektion + leichter Offset je Satz
+    const h = ((a * 120 + b * 180 + c * 240) * 0.5) + sIndex * 23.7 + (topicHash % 13) * 2.1
+    return wrapHue(h)
+  }
+
+  // Lightness (Helligkeit) aus Valenz/Sentiment
+  // signedSentiment ∈ [-1..+1] → L ∈ ~[43..67]
+  const lightFromValence = (signed) => {
+    const v = clamp01(Math.abs(signed || 0))
+    const sign = (signed || 0) >= 0 ? 1 : -1
+    return clamp(55 + sign * (12 * v), 35, 80)
+  }
+
+  // Saturation (Sättigung) aus Salience (Token-Wichtigkeit)
+  const satFromSalience = (sal) => clamp(40 + clamp01(sal) * 55, 25, 100)
+
+  // Emotions-Tints leicht einmischen (optional, dezent)
+  const applyEmotionTint = (h, s, l, hints) => {
+    if (!hints) return [h, s, l]
+    let H = h, S = s, L = l
+    for (const key of ['joy', 'anger', 'sadness', 'fear']) {
+      if (hints[key]) {
+        const t = EMOTION_TINTS[key]
+        H += t.hue; S += t.sat; L += t.light
+      }
+    }
+    return [wrapHue(H), clamp( S, 0, 100 ), clamp( L, 0, 100 )]
+  }
+
   // ---------- NEU: satz- & tokenbasierte Elemente ----------
-  // Sätze -> Ringe (Radius/Thickness ~ Länge/Score)
+  // Sätze -> Ringe (Radius/Thickness ~ Länge/Score, Farbe = HSL(H_thema, ~60, L_valenz))
   const rings = sentences.map((s, i) => {
     const r = 1.2 + i * 0.35 + (s.wordCount || 0) * 0.005
     const thickness = 0.02 + clamp01(s.score || 0) * 0.06
+    const baseHue = hueForSentence(i)
+    let sat = 58
+    let light = lightFromValence(s.signedSentiment || 0)
+    ;[sat, light] = [clamp(sat, 0, 100), clamp(light, 0, 100)]
+    const [h2, s2, l2] = applyEmotionTint(baseHue, sat, light, hints?.emotionHints)
+    const ringColor = hslToHex(h2, s2, l2)
+
     return {
       id: s.id,
       radius: r,
       thickness,
-      // leichte Neigung pro Satz aus Hash → „Drehung“ im Raum
       tilt: ((topicHash % 23) * 0.03 + i * 0.07) % (Math.PI / 2),
       opacity: 0.25 - Math.min(0.18, i * 0.03),
-      color,
+      color: ringColor,
     }
   })
 
-  // Token-Highlights: Top-N nach Salience (ohne PUNCT)
+  // Token-Highlights & Nodes: Mehrfarben (H=Satzzugehörigkeit + Typ-Bias, S=Salience, L=Valenz)
   const tokenWords = tokens.filter((t) => t.typeTag !== 'PUNCT')
+
+  // --- Highlights: Top-N nach Salience
   const topN = 24
   const highlights = tokenWords
     .filter((t) => typeof t.salience === 'number')
     .sort((a, b) => (b.salience || 0) - (a.salience || 0))
     .slice(0, topN)
     .map((t, i) => {
-      // mapping in polare Position auf dem Satz-Ring
-      const s = sentences[t.sentenceId] || { id: 0, wordCount: 1 }
+      const s = sentences[t.sentenceId] || { id: 0, wordCount: 1, signedSentiment: 0 }
       const ring = rings.find((r) => r.id === (s.id ?? 0))
       const theta = (2 * Math.PI * (i + seeded())) / Math.max(6, s.wordCount)
+
+      const baseHue = hueForSentence(t.sentenceId)
+      const hue = wrapHue(baseHue + typeHueBias(t.typeTag))
+      let sat = Math.min(100, 70 + clamp01(t.salience) * 25)
+      let light = Math.min(90, lightFromValence(s.signedSentiment) + 5)
+      const [h2, s2, l2] = applyEmotionTint(hue, sat, light, hints?.emotionHints)
+      const tokenColor = hslToHex(h2, s2, l2)
+
       return {
         tokenIdx: t.idx,
         text: t.text,
         sentenceId: t.sentenceId,
         radius: ring ? ring.radius : 1.5,
         theta,
-        size: 0.08 + (t.len || 1) * 0.02 + (t.salience || 0) * 0.12, // Wortlänge + Salience
+        size: 0.08 + (t.len || 1) * 0.02 + (t.salience || 0) * 0.12,
         glow: 0.3 + (t.salience || 0) * 0.7,
-        color: colorForToken(t, color),
+        color: tokenColor,
       }
     })
 
-  // Token-Nodes (für spätere „Perlenketten“ auf Ästen): kompaktes Layout
-  // Wir verteilen Tokens pro Satz entlang des Rings; "linkStrength" moduliert lokale Verzweigungen.
+  // --- Nodes: pro Wort/Token
   const nodes = tokenWords.map((t) => {
-    const s = sentences[t.sentenceId] || { id: 0, wordCount: 1, score: 0 }
+    const s = sentences[t.sentenceId] || { id: 0, wordCount: 1, score: 0, signedSentiment: 0 }
     const ring = rings.find((r) => r.id === (s.id ?? 0))
     const idxInSent = indexWithinSentence(tokens, t.idx, t.sentenceId)
     const theta =
       (2 * Math.PI * (idxInSent + 1)) / Math.max(2, s.wordCount) + seeded() * 0.05
     const radius = (ring ? ring.radius : 1.5) + (seeded() - 0.5) * 0.1
-    const linkStrength = 0.3 + 0.7 * clamp01(s.score || 0) // stärkere Verzweigung bei starken Satzemotionen
+    const linkStrength = 0.3 + 0.7 * clamp01(s.score || 0)
+
+    const baseHue = hueForSentence(t.sentenceId)
+    const hue = wrapHue(baseHue + typeHueBias(t.typeTag))
+    let sat = satFromSalience(t.salience || 0)
+    let light = lightFromValence(s.signedSentiment || 0)
+    const [h2, s2, l2] = applyEmotionTint(hue, sat, light, hints?.emotionHints)
+    const tokenColor = hslToHex(h2, s2, l2)
 
     return {
       tokenIdx: t.idx,
@@ -118,12 +183,13 @@ export function mapToBloomData(analysisResult) {
       salience: clamp01(t.salience || 0),
       size: 0.04 + (t.len || 1) * 0.01,
       linkStrength,
-      color: colorForToken(t, color),
+      color: tokenColor,
       typeTag: t.typeTag,
     }
   })
 
   // Links: kurze Kanten zwischen aufeinanderfolgenden Tokens eines Satzes
+  // (Material-Farbe bleibt global für Dezenz; pro-Link-Farbe optional später)
   const links = []
   for (let sId = 0; sId < sentences.length; sId++) {
     const sentenceTokens = nodes.filter((n) => n.sentenceId === sId)
@@ -138,14 +204,23 @@ export function mapToBloomData(analysisResult) {
     }
   }
 
-  // Partikel-spezifische Tokenparameter (für EnergyParticles als alternative „Wort-Partikel“)
-  const tokenParticles = tokenWords.slice(0, 320).map((t) => ({
-    tokenIdx: t.idx,
-    size: 0.1 + (t.len || 1) * 0.03,
-    speed: 0.5 + clamp01(t.salience || 0) * 0.9, // salientere Wörter bewegen sich schneller
-    hueBias: hueBiasForToken(t), // verschiebt HSL-Hue leicht nach Worttypen
-    direction, // erbt globale Richtung
-  }))
+  // Partikel-spezifische Tokenparameter (EnergyParticles im Token-Modus)
+  // HueBias relativ zur Basis-Hue des Partikelsystems (pos=0.5, neg=0.8, neu=0.62)
+  const baseHueGlobal = direction > 0 ? 0.5 : direction < 0 ? 0.8 : 0.62
+  const tokenParticles = tokenWords.slice(0, 320).map((t) => {
+    const s = sentences[t.sentenceId] || { signedSentiment: 0 }
+    const baseHue = hueForSentence(t.sentenceId)
+    const hue = wrapHue(baseHue + typeHueBias(t.typeTag))
+    const hueBias = (hue / 360) - baseHueGlobal
+
+    return {
+      tokenIdx: t.idx,
+      size: 0.1 + (t.len || 1) * 0.03,
+      speed: 0.5 + clamp01(t.salience || 0) * 0.9,
+      hueBias,      // harmoniert mit Partikel-HSL in EnergyParticles
+      direction,    // erbt globale Richtung
+    }
+  })
 
   return {
     structure: {
@@ -153,20 +228,19 @@ export function mapToBloomData(analysisResult) {
       complexity,
       symmetry,
       angle,
-      color,
+      color,        // globale Basis (Fallback/Links)
 
       // neue, feingranulare Daten
-      rings,       // [{id, radius, thickness, tilt, opacity, color}]
-      nodes,       // [{tokenIdx, radius, theta, size, salience, color, ...}]
-      links,       // [{a: tokenIdx, b: tokenIdx, weight}]
-      highlights,  // Top-Tokens für Marker/Glow
+      rings,        // [{id, radius, thickness, tilt, opacity, color}]
+      nodes,        // [{tokenIdx, radius, theta, size, salience, color, ...}]
+      links,        // [{a: tokenIdx, b: tokenIdx, weight}]
+      highlights,   // Top-Tokens für Marker/Glow
     },
 
     energy: {
       speed,
       count,
       direction,
-      // optional: tokengetriebene Partikel
       tokens: tokenParticles,
     },
 
@@ -185,10 +259,10 @@ export function mapToBloomData(analysisResult) {
         complexity: '∝ Wortanzahl + Varianz(Satzlänge)',
         symmetry: '∝ Lexikalische Diversität (TTR)',
         angle: '∝ Embedding[0] + Topic-Hash',
-        color: 'Sentiment ± Emotions-Hints',
-        energy: 'Speed=max(Sentiment, Betonung), Richtung=Sentiment',
-        rings: 'pro Satz: Radius ∝ Position & Länge, Dicke ∝ Satz-Emotion',
-        nodes: 'pro Wort: Position ∝ Satz & Index, Größe ∝ Länge, Glow ∝ Salience',
+        color: 'Globaler Fallback; Ringe/NODES nutzen HSL (Hue=Thema, Sat=Salience, Light=Valenz)',
+        energy: 'Speed=max(Sentiment, Betonung), Richtung=Sentiment; Token-HueBias ~ Token-Farbe',
+        rings: 'pro Satz: Radius ∝ Position & Länge, Dicke ∝ Satz-Emotion, Farbe ∝ Thema/Valenz',
+        nodes: 'pro Wort: Position ∝ Satz & Index, Größe ∝ Länge, Farbe ∝ Salience/Valenz/Typ',
         links: 'lokale Abhängigkeit aufeinanderfolgender Wörter, Gewicht ∝ Satz-Emotion',
       },
     },
@@ -197,13 +271,7 @@ export function mapToBloomData(analysisResult) {
 
 /* ------------------ Helpers ------------------ */
 
-function clamp(v, min, max) {
-  return Math.max(min, Math.min(max, v))
-}
-function clamp01(x) {
-  if (!Number.isFinite(x)) return 0
-  return Math.max(0, Math.min(1, x))
-}
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)) }
 
 function makeRng(seed) {
   let s = (seed >>> 0) || 1
@@ -223,65 +291,4 @@ function indexWithinSentence(allTokens, tokenIdx, sentenceId) {
     }
   }
   return pos
-}
-
-function colorForToken(t, baseHex) {
-  // kleine, deterministische Variation nach Token-Typ
-  // NAME -> helleres Cyan; NUMBER/DATE -> Türkis; URL -> Blau; WORD -> Basis
-  const c = hexToRgb(baseHex || '#00d4ff')
-  const boost = (dr, dg, db) =>
-    rgbToHex(
-      clamp255(c.r + dr),
-      clamp255(c.g + dg),
-      clamp255(c.b + db)
-    )
-
-  switch (t.typeTag) {
-    case 'NAME':
-      return boost(20, 35, 35)
-    case 'NUMBER':
-    case 'DATE':
-      return boost(10, 50, 0)
-    case 'URL':
-      return boost(0, 20, 60)
-    default:
-      return baseHex || '#00d4ff'
-  }
-}
-
-function hueBiasForToken(t) {
-  // -0.1..+0.1 Hue-Shift abhängig vom Typ
-  switch (t.typeTag) {
-    case 'NAME': return +0.06
-    case 'NUMBER':
-    case 'DATE': return +0.03
-    case 'URL': return -0.05
-    default: return 0
-  }
-}
-
-function hexToRgb(hex) {
-  const clean = (hex || '#00d4ff').replace('#', '')
-  const num = parseInt(clean.length === 3 ? expand3(clean) : clean, 16)
-  return { r: (num >> 16) & 255, g: (num >> 8) & 255, b: num & 255 }
-}
-
-function rgbToHex(r, g, b) {
-  return (
-    '#' +
-    [r, g, b]
-      .map((v) => {
-        const s = v.toString(16)
-        return s.length === 1 ? '0' + s : s
-      })
-      .join('')
-  )
-}
-
-function expand3(h) {
-  return h.split('').map((c) => c + c).join('')
-}
-
-function clamp255(x) {
-  return Math.max(0, Math.min(255, Math.round(x)))
 }
