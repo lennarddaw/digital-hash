@@ -1,0 +1,122 @@
+NEURAL BLOOM - PROJEKT BESCHREIBUNG
+
+📖 HAUPTBESCHREIBUNG (Für Website/Präsentation)
+Neural Bloom ist eine interaktive Web-Erfahrung, die geschriebene Gedanken in lebendige, dreidimensionale neuronale Strukturen verwandelt. Inspiriert von Miguel Chevaliers Ausstellung "Digital by Nature" in der Kunsthalle München, überträgt dieses Projekt die Prinzipien generativer Kunst ins Digitale – ohne botanische Metaphern, dafür mit der rohen Ästhetik neuronaler Netzwerke.
+Jeder Besucher kann einen Text beliebiger Länge schreiben – Gedanken, Träume, Geschichten, Reflexionen – und zusehen, wie künstliche Intelligenz diese Worte analysiert und in eine einzigartige visuelle Struktur übersetzt. Die entstehenden "Neural Blooms" sind keine statischen Bilder, sondern pulsierende, reaktive Organismen: Sie verzweigen sich basierend auf der Semantik des Textes, leuchten in Farben, die von der emotionalen Stimmung geprägt sind, und lassen Energie durch ihre Verbindungen fließen, deren Geschwindigkeit die Intensität der Gedanken widerspiegelt.
+Das Projekt nutzt modernste Browser-basierte KI-Modelle (Transformers.js), die vollständig lokal laufen – ohne Server, ohne APIs, ohne Datenweitergabe. Jede Kreation ist privat, individuell und exportierbar. Neural Bloom ist ein digitales Atelier für Gedanken, ein Spiegel des Unbewussten, eine Brücke zwischen Sprache und Form.
+
+🎯 ELEVATOR PITCH (60 Sekunden)
+"Deine Gedanken als lebende Struktur"
+Neural Bloom verwandelt Text in 3D-Kunstwerke. Du schreibst – KI analysiert – ein neuronales Netzwerk wächst in Echtzeit. Jede Struktur ist einzigartig: Die Anzahl der Äste spiegelt deine Sätze wider, die Farben dein Sentiment, die Energie die Intensität deiner Worte.
+Inspiriert von generativer Kunst, gebaut mit React, Three.js und lokaler KI. Keine Server, keine Daten-Übertragung – alles läuft im Browser. Das Ergebnis? Eine visuell-emotionale Manifestation dessen, was in deinem Kopf ist.
+
+🔬 TECHNISCHE BESCHREIBUNG (Für Entwickler/Dokumentation)
+Konzept
+Neural Bloom ist eine React-basierte Web-Applikation, die Natural Language Processing (NLP) mit generativer 3D-Visualisierung verbindet. Die Anwendung analysiert User-Input mittels Transformer-Modellen und mappt die extrahierten Features auf Parameter eines prozedural generierten 3D-Objekts.
+Technologie-Stack
+
+Frontend: React 18 + Vite
+3D-Rendering: Three.js + React Three Fiber
+AI/ML: Transformers.js (Xenova) - Browser-native Inference
+Modelle:
+
+all-MiniLM-L6-v2 (Text Embeddings)
+distilbert-base-uncased-finetuned-sst-2-english (Sentiment Analysis)
+
+Styling: Tailwind CSS
+State Management: Zustand
+
+Pipeline
+User Text Input
+    ↓
+Text Analysis (Transformers.js)
+    ├─ Embeddings (384-dimensional vectors)
+    ├─ Sentiment Analysis (POSITIVE/NEGATIVE + confidence)
+    └─ Text Statistics (word count, sentences, uniqueness)
+    ↓
+Feature Mapping (AI → Visual Parameters)
+    ├─ Embedding dimensions → Branch angles, symmetry
+    ├─ Sentiment → Color palettes, energy flow
+    └─ Statistics → Complexity, branch count
+    ↓
+Procedural Generation (L-System + Three.js)
+    ├─ Geometry: Recursive branching algorithm
+    ├─ Materials: Custom shaders for glow effects
+    └─ Particles: Flow simulation based on text intensity
+    ↓
+Real-time 3D Rendering
+Kernfeatures
+
+Vollständig client-side (keine Backend-Infrastruktur)
+Model Loading nur beim ersten Besuch (~50MB, danach gecacht)
+Debounced Analysis (1s Delay) für Performance
+Export als PNG (Canvas Screenshot)
+LocalStorage für persistente Kreationen
+
+🎨 KÜNSTLERISCHE BESCHREIBUNG (Für Portfolio/Ausstellung)
+NEURAL BLOOM: Wo Sprache Struktur wird
+In der Tradition digitaler Pioniere wie Miguel Chevalier erforscht Neural Bloom das Verhältnis zwischen dem Geschriebenen und dem Sichtbaren, zwischen Algorithmus und Intuition. Während Chevalier mit virtuellen Blumen die Schnittstelle von Natur und Technologie untersucht, wendet sich Neural Bloom nach innen: Es visualisiert nicht die Natur, sondern die neuronalen Pfade unseres Denkens selbst.
+Jeder Text – ob Tagebucheintrag, Gedicht oder spontaner Gedankenstrom – wird durch künstliche Intelligenz analysiert und in eine dreidimensionale neuronale Struktur übersetzt. Diese Strukturen sind keine Illustrationen, sondern autonome digitale Entitäten: Sie verzweigen sich nach den Regeln emergenter Systeme, pulsieren mit der emotionalen Energie ihrer Quelle, und existieren als flüchtige Momente gefrorener Kognition.
+Das Projekt stellt Fragen:
+
+Kann eine Maschine die Essenz menschlicher Gedanken einfangen?
+Wie sieht Freude aus? Wie Melancholie? Wie Wut?
+Wenn jeder Gedanke eine Form hätte – wäre sie schön?
+
+Neural Bloom ist ein Experiment in algorithmischer Empathie, ein Tool für Selbstreflexion, und eine Einladung, die eigenen Gedanken aus einer neuen Perspektive zu betrachten.
+
+🌟 VISION & ERWEITERUNGEN
+Phase 1: MVP (Aktuell)
+
+Text-Input → AI-Analyse → 3D Neural Bloom
+Sentiment-basierte Farben
+Export-Funktion
+
+Phase 2: Kontext-Reaktivität
+
+Tageszeit: Farb-Paletten ändern sich mit der Uhrzeit
+Location: Geolocation beeinflusst Symmetrie/Dichte
+Wetter-API: Externe Daten modulieren die Struktur
+
+Phase 3: Multi-Modale Interaktion
+
+Kamera-Input: Gesichtserkennung → Emotionen beeinflussen Bloom
+Mikrofon: Gesprochener Text als Input
+Gestik: Hand-Tracking verformt die Struktur in Echtzeit
+
+Phase 4: Kollektive Erfahrung
+
+Digitaler Garten: Alle Kreationen wachsen in einem gemeinsamen Raum
+Peer-to-Peer: Strukturen können miteinander "kommunizieren"
+Generative Evolution: Blooms entwickeln sich über Zeit weiter
+
+📊 ZIELGRUPPE
+Primär:
+
+Digital Natives interessiert an KI & generativer Kunst
+Kreative (Schreibende, Designer, Künstler)
+Tech-affine Personen die neue Interfaces erkunden
+
+Sekundär:
+
+Bildungseinrichtungen (Visualisierung von Text-Analyse)
+Therapeutische Anwendungen (Gedanken externalisieren)
+Museums-Besucher (Interaktive Ausstellungen)
+
+💎 USPs (Unique Selling Points)
+
+Vollständig lokal: Keine Server, keine Tracking, maximale Privacy
+Instant: Kein Account, keine Installation – einfach schreiben
+Einzigartig: Jede Struktur ist ein Unikat basierend auf deinen Worten
+Wissenschaftlich fundiert: Echte NLP-Modelle, keine Random-Generation
+Ästhetisch: Inspiriert von neurowissenschaftlicher Visualisierung + digitaler Kunst
+Exportierbar: Kreationen können gespeichert und geteilt werden
+
+🎭 TAGLINE-OPTIONEN
+
+"Transform thoughts into living structures"
+"Your words, visualized"
+"Where language becomes form"
+"Neural networks that understand you"
+"The architecture of your thoughts"
+"Gedanken, die wachsen" (DE)
