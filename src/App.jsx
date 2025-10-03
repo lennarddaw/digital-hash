@@ -4,6 +4,7 @@ import TextInput from './components/TextInput'
 import BloomCanvas from './components/BloomCanvas'
 import LoadingState from './components/LoadingState'
 import ExportButton from './components/ExportButton'
+import MusicPlayer from './components/MusicPlayer.jsx'
 import useTextAnalysis from './hooks/useTextAnalysis'
 import InspectPanel from './components/InspectPanel.jsx' // <— NEU
 
@@ -101,6 +102,20 @@ export default function App() {
         {hasBloom && (
           <div className="absolute bottom-8 right-8 pointer-events-auto">
             <ExportButton />
+            <MusicPlayer
+              className="w-80"
+              playlist={[
+                { title: 'Emotional Ambient Pop', artist: 'EONA', src: '/audio/eona-emotional-ambient-pop-351436.mp3' },
+                { title: 'baroque-trap-412613',  artist: 'Local', src: '/audio/baroque-trap-412613.mp3' },
+                { title: 'gothic-black-metal-music',   artist: 'Local', src: '/audio/gothic-black-metal-music-no-copyright-383590.mp3' },
+                { title: 'kugelsicher',   artist: 'tremoxbeatz', src: '/audio/kugelsicher-by-tremoxbeatz-302838.mp3' },
+                { title: 'nocturne-hip-hop-chopin',   artist: 'Local', src: '/audio/nocturne-n20-hip-hop-chopin-160904.mp3' },
+                { title: 'beat-electronic-digital',   artist: 'the-last-point', src: '/audio/the-last-point-beat-electronic-digital-394291.mp3' },
+                { title: 'trap-basketball-beat-music',   artist: 'Local', src: '/audio/trap-basketball-beat-music-412802.mp3' },
+                { title: 'four-seasons-quotwinterquot',   artist: 'vivaldi', src: '/audio/vivaldi-four-seasons-quotwinterquot-rv-297-arr-for-strings-185593.mp3' }
+              ]}
+              autoPlay={false}
+            />
           </div>
         )}
       </div>
