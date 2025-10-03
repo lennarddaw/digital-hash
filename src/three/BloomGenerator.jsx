@@ -1,5 +1,5 @@
 // src/three/BloomGenerator.jsx
-import { useMemo, useRef, useLayoutEffect } from 'react'
+import { useMemo, useRef, useLayoutEffect, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
@@ -184,7 +184,14 @@ export default function BloomGenerator({ params }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rings, nodes, links, highlights, color, topicHash])
 
-  // Instanzmatrizen & -farben setzen (ohne <primitive/>)
+  // linkGeometry sauber entsorgen, wenn neu erstellt
+  useEffect(() => {
+    return () => {
+      linkGeometry?.dispose?.()
+    }
+  }, [linkGeometry])
+
+  // Instanzmatrizen & -farben setzen
   useLayoutEffect(() => {
     const mesh = instRef.current
     if (!mesh) return
@@ -238,7 +245,10 @@ export default function BloomGenerator({ params }) {
   return (
     <group ref={groupRef}>
       {/* 1) Globale organische Basis */}
-      <lineSegments geometry={baseGeometry}>
+      <lineSegments
+        geometry={baseGeometry}
+        key={`base-${branches}-${complexity}-${symmetry}-${angle}-${topicHash}`}
+      >
         <lineBasicMaterial
           ref={baseLineMatRef}
           color={baseColor}
@@ -250,7 +260,10 @@ export default function BloomGenerator({ params }) {
       </lineSegments>
 
       {/* Glow entlang der Basis */}
-      <points geometry={baseGlowGeometry}>
+      <points
+        geometry={baseGlowGeometry}
+        key={`baseglow-${branches}-${complexity}-${symmetry}-${angle}-${topicHash}`}
+      >
         <pointsMaterial
           size={0.14}
           color={baseColor}
@@ -264,21 +277,30 @@ export default function BloomGenerator({ params }) {
 
       {/* 2) Satz-Ringe */}
       {ringMeshesData.map((r) => (
-        <mesh key={`ring-${r.id}`} rotation={[r.tilt, 0, 0]} position={[0, CENTER_Y, 0]}>
+        <mesh
+          key={`ring-${r.id}-${r.radius.toFixed(3)}-${r.thickness.toFixed(3)}`}
+          rotation={[r.tilt, 0, 0]}
+          position={[0, CENTER_Y, 0]}
+        >
           <torusGeometry args={[r.radius, r.thickness, 16, 100]} />
           <meshBasicMaterial color={r.color} transparent opacity={r.opacity} />
         </mesh>
       ))}
 
       {/* 3) Token-Nodes (Instanzen) */}
-      <instancedMesh ref={instRef} args={[undefined, undefined, Math.max(1, nodeCount)]} frustumCulled={false}>
+      <instancedMesh
+        ref={instRef}
+        key={`inst-${nodeCount}`}
+        args={[undefined, undefined, Math.max(1, nodeCount)]}
+        frustumCulled={false}
+      >
         <sphereGeometry args={[0.5, 12, 12]} />
         <meshBasicMaterial transparent opacity={0.9} vertexColors />
       </instancedMesh>
 
       {/* 4) Links zwischen Tokens */}
       {links.length > 0 && linkGeometry.attributes.position && (
-        <lineSegments geometry={linkGeometry}>
+        <lineSegments geometry={linkGeometry} key={`links-${links.length}`}>
           <lineBasicMaterial
             color={color}
             transparent
@@ -304,7 +326,12 @@ export default function BloomGenerator({ params }) {
       {/* 6) Zentraler Kern */}
       <mesh position={[0, CENTER_Y, 0]}>
         <sphereGeometry args={[0.32, 20, 20]} />
-        <meshBasicMaterial color={baseColor} transparent opacity={0.65} blending={THREE.AdditiveBlending} />
+        <meshBasicMaterial
+          color={baseColor}
+          transparent
+          opacity={0.65}
+          blending={THREE.AdditiveBlending}
+        />
       </mesh>
     </group>
   )

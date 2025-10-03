@@ -236,7 +236,7 @@ export default function EnergyParticles({ params }) {
   })
 
   return (
-    <points ref={pointsRef}>
+    <points ref={pointsRef} key={`points-${count}-${tokenMode ? 'tok' : 'agg'}`}>
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"
