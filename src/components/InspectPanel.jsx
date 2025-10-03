@@ -23,7 +23,7 @@ function InspectPanel({ target, onClose }) {
         onClick={onClose}
         className="mt-3 text-xs px-3 py-1 rounded bg-white/10 hover:bg-white/20"
       >
-        Schließen
+        Close
       </button>
     </div>
   )
