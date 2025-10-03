@@ -42,7 +42,7 @@ export default function App() {
 
           {/* Legende / Metriken – nur anzeigen, wenn Daten vorhanden sind */}
           {hasBloom && (
-            <div className="pointer-events-auto p-4 mt-4 bg-white/5 border border-white/10 rounded-lg backdrop-blur-sm">
+            <div className="pointer-events-auto p-4 mt-4 bg-white/5 border border-white/10 rounded-lg backdrop-blur-sm max-w-md">
 
               <div className="text-sm text-gray-200 grid grid-cols-2 gap-x-6 gap-y-2">
                 <div>
@@ -51,7 +51,7 @@ export default function App() {
                     {meta?.sentiment ?? '—'}
                   </span>
                   {typeof meta?.confidence === 'number' && (
-                    <span className="text-gray-400"> (conf {meta.confidence.toFixed(2)})</span>
+                    <span className="text-gray-400"> (confidence {meta.confidence.toFixed(2)})</span>
                   )}
                 </div>
                 <div>
