@@ -1,5 +1,5 @@
 // src/three/EnergyParticles.jsx
-import { useRef, useMemo } from 'react'
+import { useRef, useMemo, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
@@ -7,19 +7,19 @@ import * as THREE from 'three'
  * Visualisiert "Energie" aus dem Text.
  *
  * Zwei Betriebsarten:
- * 1) Aggregiert (wie bisher)
+ * 1) Aggregiert (Fallback)
  *    - direction:  1 = aufwärts (positiv), -1 = spiral abwärts (negativ), 0 = schwebend (neutral)
  *    - speed:      aus Sentiment/Betonung
  *    - count:      aus Wortanzahl (geclamped)
  *    - questionFactor: 0..1 Oszillation/Flackern (Frage-Intensität)
  *    - varianceFactor: 0..1 Größenstreuung (Satzlängen-Varianz)
  *
- * 2) Token-Modus (feingranular, wenn params.tokens vorhanden)
+ * 2) Token-Modus (wenn params.tokens vorhanden)
  *    - tokens: [{ tokenIdx, size, speed, hueBias, direction }]
- *      -> JEDES Partikel repräsentiert ein Wort/Token
+ *      -> jedes Partikel repräsentiert ein Wort/Token
  *      -> Größe ∝ Wortlänge, Speed ∝ Salience, Hue-Bias ∝ Token-Typ
  */
-export default function EnergyParticles({ params }) {
+export default function EnergyParticles({ params, onInspect }) {
   const pointsRef = useRef()
   const velocitiesRef = useRef()
   const lifetimesRef = useRef()
@@ -68,10 +68,10 @@ export default function EnergyParticles({ params }) {
         const tok = tokens[i]
         const seed = (tok?.tokenIdx ?? i) + 1
         const rng = rngFromSeed(seed)
-        radius = 1 + (rng() * 1.5) // kompaktere Startwolke je Token
+        radius = 1 + rng() * 1.5 // kompaktere Startwolke je Token
         angle = rng() * Math.PI * 2
         localDir =
-          typeof tok.direction === 'number' ? tok.direction : direction
+          typeof tok?.direction === 'number' ? tok.direction : direction
         localSpeed = (tok?.speed ?? 1) * Math.max(0.4, speed)
         hueBias = clamp(tok?.hueBias ?? 0, -0.15, 0.15)
         baseHue = clamp(baseHueGlobal + hueBias, 0, 1)
@@ -128,10 +128,12 @@ export default function EnergyParticles({ params }) {
   // Animation / Update-Loop
   useFrame((state) => {
     if (!pointsRef.current) return
+    const geom = pointsRef.current.geometry
+    if (!geom?.attributes?.position) return
 
-    const positions = pointsRef.current.geometry.attributes.position.array
-    const colors = pointsRef.current.geometry.attributes.color.array
-    const sizes = pointsRef.current.geometry.attributes.size.array
+    const positions = geom.attributes.position.array
+    const colors = geom.attributes.color.array
+    const sizes = geom.attributes.size.array
     const velocities = velocitiesRef.current
     const lifetimes = lifetimesRef.current
 
@@ -230,13 +232,59 @@ export default function EnergyParticles({ params }) {
       colors[i3 + 2] = color.b
     }
 
-    pointsRef.current.geometry.attributes.position.needsUpdate = true
-    pointsRef.current.geometry.attributes.color.needsUpdate = true
-    pointsRef.current.geometry.attributes.size.needsUpdate = true
+    geom.attributes.position.needsUpdate = true
+    geom.attributes.color.needsUpdate = true
+    geom.attributes.size.needsUpdate = true
   })
 
+  // Hygiene: Geometrie beim Remount/Unmount entsorgen
+  useEffect(() => {
+    return () => {
+      if (pointsRef.current?.geometry) pointsRef.current.geometry.dispose?.()
+    }
+  }, [count, tokenMode])
+
   return (
-    <points ref={pointsRef} key={`points-${count}-${tokenMode ? 'tok' : 'agg'}`}>
+    <points
+      ref={pointsRef}
+      key={`points-${count}-${tokenMode ? 'tok' : 'agg'}`}
+      onPointerDown={(e) => {
+        e.stopPropagation()
+        const i = typeof e.index === 'number' ? e.index : 0
+        if (tokenMode) {
+          const tok = tokens[i]
+          if (!tok) return
+          onInspect?.({
+            kind: 'Partikel (Token)',
+            title: `Token #${tok.tokenIdx}`,
+            details: {
+              size: (tok.size ?? 0).toFixed(3),
+              speed: (tok.speed ?? 0).toFixed(3),
+              direction: tok.direction,
+              hueBias: (tok.hueBias ?? 0).toFixed(3),
+            },
+            mapping: [
+              'Größe ∝ Wortlänge',
+              'Speed ∝ Salience des Wortes',
+              'Hue-Bias ∝ Worttyp (NAME/NUMBER/DATE/URL)',
+              'Richtung erbt globale Sentiment-Richtung',
+            ],
+          })
+        } else {
+          onInspect?.({
+            kind: 'Partikel (Aggregat)',
+            title: 'Energiefluss',
+            details: { count, speed, direction, questionFactor, varianceFactor },
+            mapping: [
+              'Anzahl ∝ Wortanzahl',
+              'Geschwindigkeit ∝ max(Sentiment-Score, Betonung)',
+              'Richtung: POS↑ / NEG↓ / NEU ~ schwebend',
+              'Oszillation ∝ Frage-Intensität',
+            ],
+          })
+        }
+      }}
+    >
       <bufferGeometry>
         <bufferAttribute
           attach="attributes-position"

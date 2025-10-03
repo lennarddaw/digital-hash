@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import BloomGenerator from './BloomGenerator'
 import EnergyParticles from './EnergyParticles'
 
-export default function NeuralBloomScene({ bloomData }) {
+export default function NeuralBloomScene({ bloomData, onInspect }) {
   const groupRef = useRef()
   const ambientLightRef = useRef()
   const [transitionProgress, setTransitionProgress] = useState(0)
@@ -59,6 +59,7 @@ export default function NeuralBloomScene({ bloomData }) {
             links: [],
             highlights: [],
           }}
+          onInspect={onInspect}
         />
 
         <EnergyParticles
@@ -69,6 +70,7 @@ export default function NeuralBloomScene({ bloomData }) {
             questionFactor: 0,
             varianceFactor: 0.3,
           }}
+          onInspect={onInspect}
         />
 
         {/* Zentrale Glow-Sphäre */}
@@ -129,6 +131,7 @@ export default function NeuralBloomScene({ bloomData }) {
           meanSentenceLength: metadata?.meanSentenceLength || 10,
           topicHash: metadata?.topicHash || 1,
         }}
+        onInspect={onInspect}
       />
 
       {/* Energie-Partikel:
@@ -140,7 +143,9 @@ export default function NeuralBloomScene({ bloomData }) {
           questionFactor,
           varianceFactor,
         }}
+        onInspect={onInspect}
       />
+
       {/* Zweite Schicht nur im Aggregatmodus (für Tiefe/Dichte).
           Im Token-Modus vermeiden wir Doppelung, da tokens bereits alle Wörter abdecken. */}
       {!tokenMode && (
@@ -152,6 +157,7 @@ export default function NeuralBloomScene({ bloomData }) {
             questionFactor,
             varianceFactor,
           }}
+          onInspect={onInspect}
         />
       )}
 

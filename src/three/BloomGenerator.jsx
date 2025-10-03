@@ -3,7 +3,7 @@ import { useMemo, useRef, useLayoutEffect, useEffect } from 'react'
 import { useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
 
-export default function BloomGenerator({ params }) {
+export default function BloomGenerator({ params, onInspect }) {
   const groupRef = useRef()
   const baseLineMatRef = useRef()
   const instRef = useRef() // InstancedMesh-Ref (Token-Nodes)
@@ -20,7 +20,7 @@ export default function BloomGenerator({ params }) {
 
     // neue, feingranulare Daten
     rings = [],       // [{id, radius, thickness, tilt, opacity, color}]
-    nodes = [],       // [{tokenIdx, radius, theta, size, salience, color, sentenceId, ...}]
+    nodes = [],       // [{tokenIdx, radius, theta, size, salience, color, sentenceId, text?, typeTag?}]
     links = [],       // [{a: tokenIdx, b: tokenIdx, weight}]
     highlights = [],  // [{tokenIdx, radius, theta, size, glow, color, sentenceId?, text?}]
   } = params || {}
@@ -169,6 +169,7 @@ export default function BloomGenerator({ params }) {
         glow: Math.max(0.2, h.glow || 0.5),
         color: h.color || color,
         text: h.text,
+        sentenceId: h.sentenceId,
       }
     })
 
@@ -197,7 +198,6 @@ export default function BloomGenerator({ params }) {
     if (!mesh) return
     const dummy = new THREE.Object3D()
 
-    // Sicherheit: falls nodeCount 0 ist, verhindere Exceptions
     const total = Math.max(0, nodeCount)
     if (!mesh.instanceMatrix || total === 0) {
       mesh.count = 0
@@ -248,6 +248,29 @@ export default function BloomGenerator({ params }) {
       <lineSegments
         geometry={baseGeometry}
         key={`base-${branches}-${complexity}-${symmetry}-${angle}-${topicHash}`}
+        onPointerDown={(e) => {
+          e.stopPropagation()
+          onInspect?.({
+            kind: 'Basisstruktur',
+            title: 'L-System-Kontur',
+            details: {
+              branches,
+              complexity,
+              symmetry: symmetry.toFixed(2),
+              angle: `${angle}°`,
+              color,
+              meanSentenceLength,
+              topicHash,
+            },
+            mapping: [
+              'Äste ∝ log(#Sätze) + Varianz der Satzlängen',
+              'Komplexität ∝ Wortanzahl + Varianz der Satzlängen',
+              'Symmetrie ∝ Lexikalische Diversität (TTR)',
+              'Winkel ∝ Embedding[0] + Topic-Hash',
+              'Liniendicke ∝ mittlere Satzlänge',
+            ],
+          })
+        }}
       >
         <lineBasicMaterial
           ref={baseLineMatRef}
@@ -263,6 +286,18 @@ export default function BloomGenerator({ params }) {
       <points
         geometry={baseGlowGeometry}
         key={`baseglow-${branches}-${complexity}-${symmetry}-${angle}-${topicHash}`}
+        onPointerDown={(e) => {
+          e.stopPropagation()
+          onInspect?.({
+            kind: 'Basis-Glow',
+            title: 'Energie entlang der Äste',
+            details: { color, topicHash },
+            mapping: [
+              'Glow-Punkte sampeln die Branches gleichmäßig',
+              'Leichte, deterministische Störung ∝ Seed(Topic-Hash)',
+            ],
+          })
+        }}
       >
         <pointsMaterial
           size={0.14}
@@ -281,6 +316,25 @@ export default function BloomGenerator({ params }) {
           key={`ring-${r.id}-${r.radius.toFixed(3)}-${r.thickness.toFixed(3)}`}
           rotation={[r.tilt, 0, 0]}
           position={[0, CENTER_Y, 0]}
+          onPointerDown={(e) => {
+            e.stopPropagation()
+            onInspect?.({
+              kind: 'Satz-Ring',
+              title: `Satz ${r.id + 1}`,
+              details: {
+                radius: r.radius.toFixed(2),
+                thickness: r.thickness.toFixed(3),
+                tilt: r.tilt.toFixed(3),
+                opacity: typeof r.opacity === 'number' ? r.opacity.toFixed(2) : r.opacity,
+                color: r.color,
+              },
+              mapping: [
+                'Radius ∝ Satz-Index & Satzlänge',
+                'Dicke ∝ Satz-Emotion (|Sentiment|)',
+                'Neigung ∝ Topic-Hash (deterministische Variation)',
+              ],
+            })
+          }}
         >
           <torusGeometry args={[r.radius, r.thickness, 16, 100]} />
           <meshBasicMaterial color={r.color} transparent opacity={r.opacity} />
@@ -293,6 +347,32 @@ export default function BloomGenerator({ params }) {
         key={`inst-${nodeCount}`}
         args={[undefined, undefined, Math.max(1, nodeCount)]}
         frustumCulled={false}
+        onPointerDown={(e) => {
+          e.stopPropagation()
+          const i = e.instanceId ?? -1
+          if (i < 0 || i >= nodeCount) return
+          const n = nodes[i]
+          onInspect?.({
+            kind: 'Wort-Knoten',
+            title: n?.text ?? `(Token #${n?.tokenIdx ?? i})`,
+            details: {
+              tokenIdx: n?.tokenIdx,
+              sentenceId: n?.sentenceId,
+              radius: n?.radius?.toFixed?.(2),
+              theta: n?.theta?.toFixed?.(3),
+              size: n?.size?.toFixed?.(3),
+              salience: (n?.salience ?? 0).toFixed(3),
+              typeTag: n?.typeTag,
+              color: n?.color,
+            },
+            mapping: [
+              'Position auf dem Satz-Ring ∝ Wortindex im Satz',
+              'Größe ∝ Wortlänge',
+              'Glow/Salience ∝ Kosinus-Ähnlichkeit zum Dokument-Embedding',
+              'Farbnuancen ∝ Worttyp (NAME/NUMBER/DATE/URL/WORD)',
+            ],
+          })
+        }}
       >
         <sphereGeometry args={[0.5, 12, 12]} />
         <meshBasicMaterial transparent opacity={0.9} vertexColors />
@@ -300,7 +380,25 @@ export default function BloomGenerator({ params }) {
 
       {/* 4) Links zwischen Tokens */}
       {links.length > 0 && linkGeometry.attributes.position && (
-        <lineSegments geometry={linkGeometry} key={`links-${links.length}`}>
+        <lineSegments
+          geometry={linkGeometry}
+          key={`links-${links.length}`}
+          onPointerDown={(e) => {
+            e.stopPropagation()
+            onInspect?.({
+              kind: 'Wort-Link',
+              title: 'Lokale Wortfolge',
+              details: {
+                links: links.length,
+                hinweis: 'Gewicht ∝ Satz-Emotion',
+              },
+              mapping: [
+                'Kante verbindet aufeinanderfolgende Wörter im Satz',
+                'Gewichtung leitet Verzweigungsstärke lokal ab',
+              ],
+            })
+          }}
+        >
           <lineBasicMaterial
             color={color}
             transparent
@@ -312,7 +410,28 @@ export default function BloomGenerator({ params }) {
 
       {/* 5) Highlights (leuchtende Marker) */}
       {highlightData.map((h, i) => (
-        <mesh key={`hl-${i}`} position={h.position}>
+        <mesh
+          key={`hl-${i}`}
+          position={h.position}
+          onPointerDown={(e) => {
+            e.stopPropagation()
+            onInspect?.({
+              kind: 'Highlight-Token',
+              title: h.text ?? '(Top-Token)',
+              details: {
+                sentenceId: h.sentenceId,
+                size: h.size.toFixed(3),
+                glow: h.glow.toFixed(3),
+                color: h.color,
+              },
+              mapping: [
+                'Top-N nach Salience (semantisch prägend)',
+                'Größe/Glow ∝ Salience',
+                'Position ∝ Satz-Ring + Wortindex',
+              ],
+            })
+          }}
+        >
           <sphereGeometry args={[h.size, 16, 16]} />
           <meshBasicMaterial
             color={h.color}
@@ -324,7 +443,21 @@ export default function BloomGenerator({ params }) {
       ))}
 
       {/* 6) Zentraler Kern */}
-      <mesh position={[0, CENTER_Y, 0]}>
+      <mesh
+        position={[0, CENTER_Y, 0]}
+        onPointerDown={(e) => {
+          e.stopPropagation()
+          onInspect?.({
+            kind: 'Nucleus',
+            title: 'Zentraler Kern',
+            details: { color, topicHash },
+            mapping: [
+              'Fokale Mitte der Struktur',
+              'Leichter Puls synchron mit globaler Energie',
+            ],
+          })
+        }}
+      >
         <sphereGeometry args={[0.32, 20, 20]} />
         <meshBasicMaterial
           color={baseColor}

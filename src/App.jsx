@@ -5,9 +5,11 @@ import BloomCanvas from './components/BloomCanvas'
 import LoadingState from './components/LoadingState'
 import ExportButton from './components/ExportButton'
 import useTextAnalysis from './hooks/useTextAnalysis'
+import InspectPanel from './components/InspectPanel.jsx' // <— NEU
 
 export default function App() {
   const [userText, setUserText] = useState('')
+  const [inspectTarget, setInspectTarget] = useState(null) // <— NEU
   const { bloomData, isAnalyzing, isModelLoading } = useTextAnalysis(userText)
 
   const hasBloom = !!bloomData
@@ -17,7 +19,7 @@ export default function App() {
   return (
     <div className="w-full h-full relative">
       {/* 3D Background */}
-      <BloomCanvas bloomData={bloomData} />
+      <BloomCanvas bloomData={bloomData} onInspect={setInspectTarget} />{/* <— NEU */}
 
       {/* UI Overlay */}
       <div className="absolute inset-0 pointer-events-none">
@@ -117,6 +119,9 @@ export default function App() {
           </div>
         )}
       </div>
+
+      {/* Inspect Panel – erklärt, was angeklickt wurde */}
+      <InspectPanel target={inspectTarget} onClose={() => setInspectTarget(null)} />{/* <— NEU */}
     </div>
   )
 }
