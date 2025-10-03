@@ -54,14 +54,18 @@ export default function NeuralBloomScene({ bloomData }) {
             color: '#00d4ff',
             meanSentenceLength: 10,
             topicHash: 1,
+            rings: [],
+            nodes: [],
+            links: [],
+            highlights: [],
           }}
         />
 
         <EnergyParticles
           params={{
             speed: 0.5,
-            count: 50,
-            direction: 1,
+            count: 60,
+            direction: 0,
             questionFactor: 0,
             varianceFactor: 0.3,
           }}
@@ -100,6 +104,9 @@ export default function NeuralBloomScene({ bloomData }) {
     Math.sqrt(metadata?.varianceSentenceLength || 0) / 10
   )
 
+  // Prüfe Token-Modus (energiegebundene Partikel pro Wort)
+  const tokenMode = Array.isArray(energy?.tokens) && energy.tokens.length > 0
+
   return (
     <group ref={groupRef}>
       {/* Dynamisches Lighting */}
@@ -114,7 +121,8 @@ export default function NeuralBloomScene({ bloomData }) {
         decay={2}
       />
 
-      {/* Haupt Neural Bloom Struktur */}
+      {/* Haupt Neural Bloom Struktur
+          - rendert L-System-Basis + Satz-Ringe + Token-Nodes/Links/Highlights */}
       <BloomGenerator
         params={{
           ...structure,
@@ -123,7 +131,9 @@ export default function NeuralBloomScene({ bloomData }) {
         }}
       />
 
-      {/* Energie-Partikel: erklärbare Oszillation/Varianz */}
+      {/* Energie-Partikel:
+          - Token-Modus: jedes Partikel repräsentiert ein Wort (aus energy.tokens)
+          - Fallback: aggregierte Partikel (count/speed/direction) */}
       <EnergyParticles
         params={{
           ...energy,
@@ -131,17 +141,19 @@ export default function NeuralBloomScene({ bloomData }) {
           varianceFactor,
         }}
       />
-
-      {/* Sekundäre, verdünnte Schicht für Dichte */}
-      <EnergyParticles
-        params={{
-          ...energy,
-          count: Math.floor(energy.count * 0.3),
-          speed: energy.speed * 0.5,
-          questionFactor,
-          varianceFactor,
-        }}
-      />
+      {/* Zweite Schicht nur im Aggregatmodus (für Tiefe/Dichte).
+          Im Token-Modus vermeiden wir Doppelung, da tokens bereits alle Wörter abdecken. */}
+      {!tokenMode && (
+        <EnergyParticles
+          params={{
+            ...energy,
+            count: Math.floor(energy.count * 0.35),
+            speed: energy.speed * 0.55,
+            questionFactor,
+            varianceFactor,
+          }}
+        />
+      )}
 
       {/* Zentral-Core: Pulsierender Nucleus */}
       <mesh position={[0, -3, 0]}>
