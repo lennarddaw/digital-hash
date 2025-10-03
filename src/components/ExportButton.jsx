@@ -11,10 +11,10 @@ export default function ExportButton() {
   return (
     <button
       onClick={handleExport}
-      className="px-6 py-3 bg-cyan-500 hover:bg-cyan-600 rounded-lg
-                 font-medium transition-colors shadow-lg shadow-cyan-500/20"
+      className="px-6 py-3 bg-white-500 hover:bg-white-600 rounded-lg border border-white/700
+                 font-medium transition-colors shadow-lg shadow-white-500/20"
     >
-      Export as Image
+      Snapshot
     </button>
   )
 }
