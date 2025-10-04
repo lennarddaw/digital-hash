@@ -6,6 +6,7 @@ const OPTIONS = [
   { value: 'gradient-radial', label: 'Radial Gradient', preview: 'radial' },
   { value: 'grid', label: 'Subtle Grid', preview: 'grid' },
   { value: 'liquid-ether', label: 'Liquid Ether', preview: 'ether' },
+  { value: 'prism', label: 'Prism', preview: 'prism' },
 ]
 
 export default function BackgroundSelector({ value, onChange, className = '' }) {
@@ -153,14 +154,27 @@ function PreviewSwatch({ type }) {
       </span>
     )
   }
-  // ether
-  return (
-    <span
-      className={common}
-      style={{
-        background:
-          'conic-gradient(from 210deg at 50% 50%, #52A7FF, #FFF9FC, #B19EEF, #52A7FF 90%)'
-      }}
-    />
-  )
+  if (type === 'ether') {
+    return (
+      <span
+        className={common}
+        style={{
+          background:
+            'conic-gradient(from 210deg at 50% 50%, #52A7FF, #FFF9FC, #B19EEF, #52A7FF 90%)'
+        }}
+      />
+    )
+  }
+  if (type === 'prism') {
+    return (
+      <span
+        className={common}
+        style={{
+          background:
+            'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)'
+        }}
+      />
+    )
+  }
+  return <span className={common} style={{ background: '#000' }} />
 }

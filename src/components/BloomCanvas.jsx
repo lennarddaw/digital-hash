@@ -71,10 +71,13 @@ function InSceneBackground({ type }) {
   if (type === 'liquid-ether') {
     return <LiquidEtherSkybox />
   }
+  if (type === 'prism') {
+    return <PrismSkybox />
+  }
   return null
 }
 
-/* ---------- Liquid Ether–like shader skybox (fixed) ---------- */
+/* ---------- Liquid Ether–like shader skybox ---------- */
 function LiquidEtherSkybox() {
   const { camera } = useThree()
   const meshRef = useRef()
@@ -134,18 +137,229 @@ function LiquidEtherSkybox() {
     return mat
   }, [])
 
-  // WICHTIG: an Kamera „anheften“ + zuerst rendern
   useEffect(() => {
     if (!meshRef.current) return
     const m = meshRef.current
     m.frustumCulled = false
-    m.renderOrder = -1 // zuerst
+    m.renderOrder = -1
   }, [])
 
   useFrame((_, delta) => {
     material.uniforms.uTime.value += delta
     if (meshRef.current) {
-      // immer um die Kamera herum platzieren, keine Parallaxe
+      meshRef.current.position.copy(camera.position)
+      meshRef.current.quaternion.copy(camera.quaternion)
+    }
+  })
+
+  return (
+    <mesh ref={meshRef} scale={200}>
+      <boxGeometry args={[1, 1, 1]} />
+      <primitive object={material} attach="material" />
+    </mesh>
+  )
+}
+
+/* ---------- Prism shader skybox ---------- */
+function PrismSkybox() {
+  const { camera, viewport } = useThree()
+  const meshRef = useRef()
+
+  const material = useMemo(() => {
+    const H = 3.5
+    const BW = 5.5
+    const BASE_HALF = BW * 0.5
+    const GLOW = 1.2
+    const SCALE = 3.6
+    const HUE = 0.8
+    const CFREQ = 1.2
+    const BLOOM = 1.2
+
+    const uniforms = {
+      uTime: { value: 0 },
+      uResolution: { value: new THREE.Vector2(1, 1) },
+      uHeight: { value: H },
+      uBaseHalf: { value: BASE_HALF },
+      uGlow: { value: GLOW },
+      uScale: { value: SCALE },
+      uHueShift: { value: HUE },
+      uColorFreq: { value: CFREQ },
+      uBloom: { value: BLOOM },
+      uCenterShift: { value: H * 0.25 },
+      uInvBaseHalf: { value: 1 / BASE_HALF },
+      uInvHeight: { value: 1 / H },
+      uMinAxis: { value: Math.min(BASE_HALF, H) },
+      uRotX: { value: 0 },
+      uRotY: { value: 0 },
+      uRotZ: { value: 0 },
+    }
+
+    const vertex = /* glsl */`
+      varying vec3 vPos;
+      varying vec2 vUv;
+      void main() {
+        vPos = position;
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+      }`
+
+    const fragment = /* glsl */`
+      precision highp float;
+      varying vec3 vPos;
+      varying vec2 vUv;
+      uniform float uTime;
+      uniform vec2 uResolution;
+      uniform float uHeight;
+      uniform float uBaseHalf;
+      uniform float uGlow;
+      uniform float uScale;
+      uniform float uHueShift;
+      uniform float uColorFreq;
+      uniform float uBloom;
+      uniform float uCenterShift;
+      uniform float uInvBaseHalf;
+      uniform float uInvHeight;
+      uniform float uMinAxis;
+      uniform float uRotX;
+      uniform float uRotY;
+      uniform float uRotZ;
+
+      vec4 tanh4(vec4 x){
+        vec4 e2x = exp(2.0*x);
+        return (e2x - 1.0) / (e2x + 1.0);
+      }
+
+      float rand(vec2 co){
+        return fract(sin(dot(co, vec2(12.9898, 78.233))) * 43758.5453123);
+      }
+
+      float sdOctaAnisoInv(vec3 p){
+        vec3 q = vec3(abs(p.x) * uInvBaseHalf, abs(p.y) * uInvHeight, abs(p.z) * uInvBaseHalf);
+        float m = q.x + q.y + q.z - 1.0;
+        return m * uMinAxis * 0.5773502691896258;
+      }
+
+      float sdPyramidUpInv(vec3 p){
+        float oct = sdOctaAnisoInv(p);
+        float halfSpace = -p.y;
+        return max(oct, halfSpace);
+      }
+
+      mat3 rotationMatrix(float yaw, float pitch, float roll) {
+        float cy = cos(yaw), sy = sin(yaw);
+        float cx = cos(pitch), sx = sin(pitch);
+        float cz = cos(roll), sz = sin(roll);
+        
+        return mat3(
+          cy*cz + sy*sx*sz, -cy*sz + sy*sx*cz, sy*cx,
+          cx*sz, cx*cz, -sx,
+          -sy*cz + cy*sx*sz, sy*sz + cy*sx*cz, cy*cx
+        );
+      }
+
+      mat3 hueRotation(float a){
+        float c = cos(a), s = sin(a);
+        mat3 W = mat3(
+          0.299, 0.587, 0.114,
+          0.299, 0.587, 0.114,
+          0.299, 0.587, 0.114
+        );
+        mat3 U = mat3(
+           0.701, -0.587, -0.114,
+          -0.299,  0.413, -0.114,
+          -0.300, -0.588,  0.886
+        );
+        mat3 V = mat3(
+           0.168, -0.331,  0.500,
+           0.328,  0.035, -0.500,
+          -0.497,  0.296,  0.201
+        );
+        return W + U * c + V * s;
+      }
+
+      void main(){
+        vec2 screenPos = (vUv - 0.5) * 2.0;
+        screenPos.x *= uResolution.x / uResolution.y;
+        
+        vec2 f = screenPos * (1.0 / (0.1 * uScale));
+        float z = 5.0;
+        float d = 0.0;
+        vec3 p;
+        vec4 o = vec4(0.0);
+        
+        float cf = uColorFreq;
+        mat3 rot = rotationMatrix(uRotY, uRotX, uRotZ);
+        
+        const int STEPS = 60;
+        for (int i = 0; i < STEPS; i++) {
+          p = vec3(f, z);
+          p = rot * p;
+          vec3 q = p;
+          q.y += uCenterShift;
+          d = 0.1 + 0.2 * abs(sdPyramidUpInv(q));
+          z -= d;
+          o += (sin((p.y + z) * cf + vec4(0.0, 1.0, 2.0, 3.0)) + 1.0) / d;
+        }
+        
+        o = tanh4(o * o * (uGlow * uBloom) / 1e5);
+        
+        vec3 col = o.rgb;
+        float n = rand(gl_FragCoord.xy + vec2(uTime)) * 0.15;
+        col += (n - 0.5) * 0.3;
+        col = clamp(col, 0.0, 1.0);
+        
+        if(abs(uHueShift) > 0.0001){
+          col = clamp(hueRotation(uHueShift) * col, 0.0, 1.0);
+        }
+        
+        // Fade edges for seamless skybox
+        float edgeFade = smoothstep(0.0, 0.3, min(
+          min(vUv.x, 1.0 - vUv.x),
+          min(vUv.y, 1.0 - vUv.y)
+        ));
+        col *= mix(0.7, 1.0, edgeFade);
+        
+        gl_FragColor = vec4(col, 1.0);
+      }`
+
+    const mat = new THREE.ShaderMaterial({
+      uniforms,
+      vertexShader: vertex,
+      fragmentShader: fragment,
+      side: THREE.BackSide,
+      depthWrite: false,
+      depthTest: false,
+      fog: false
+    })
+    return mat
+  }, [])
+
+  useEffect(() => {
+    if (!meshRef.current) return
+    const m = meshRef.current
+    m.frustumCulled = false
+    m.renderOrder = -1
+  }, [])
+
+  useFrame((state, delta) => {
+    const time = state.clock.elapsedTime
+    
+    // Update resolution
+    material.uniforms.uResolution.value.set(
+      viewport.width * viewport.dpr,
+      viewport.height * viewport.dpr
+    )
+    
+    // Animated rotation (3drotate mode)
+    const wY = 0.5
+    const wX = 0.4
+    const wZ = 0.3
+    material.uniforms.uTime.value = time
+    material.uniforms.uRotY.value = time * wY * 0.4
+    material.uniforms.uRotX.value = Math.sin(time * wX + 1.0) * 0.6
+    material.uniforms.uRotZ.value = Math.sin(time * wZ + 2.0) * 0.5
+    
+    if (meshRef.current) {
       meshRef.current.position.copy(camera.position)
       meshRef.current.quaternion.copy(camera.quaternion)
     }
@@ -188,9 +402,9 @@ function BloomCanvasBase({
       camera={camera}
       gl={{
         antialias: true,
-        alpha: false,                 // Hintergrund kommt aus der Szene
-        preserveDrawingBuffer: true, // Export
-        logarithmicDepthBuffer: true // (optional) bessere Z-Präzision
+        alpha: false,
+        preserveDrawingBuffer: true,
+        logarithmicDepthBuffer: true
       }}
       shadows={false}
     >
