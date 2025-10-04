@@ -22,18 +22,20 @@ export default function App() {
   const meta = bloomData?.metadata
   const struct = bloomData?.structure
 
+  // Creator-Zeile via .env konfigurierbar
+  const CREATOR_NAME = import.meta.env.VITE_CREATOR_NAME || 'lennarddaw'
+  const REPO_URL = import.meta.env.VITE_REPO_URL || 'https://github.com/lennarddaw/digital-hash'
+
+  // Einheitliche Breite für Music-Container + Creator-Zeile
+  const MUSIC_WIDTH = 'w-80' // 20rem; ändere hier zentral, falls du die Player-Breite änderst
+
   // Keyboard shortcuts für Focus Mode
   useEffect(() => {
     const handleKeyPress = (e) => {
-      // F-Taste: Toggle Focus Mode
-      if (e.key === 'f' || e.key === 'F') {
-        // Nur wenn nicht in Input-Feld
-        if (e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
-          e.preventDefault()
-          setFocusMode(prev => !prev)
-        }
+      if ((e.key === 'f' || e.key === 'F') && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'INPUT') {
+        e.preventDefault()
+        setFocusMode(prev => !prev)
       }
-      // Escape: Focus Mode verlassen
       if (e.key === 'Escape' && focusMode) {
         e.preventDefault()
         setFocusMode(false)
@@ -148,26 +150,45 @@ export default function App() {
       {/* UI Overlay - RECHTE SEITE */}
       {hasBloom && (
         <>
-          {/* Music Player */}
+          {/* Music Player + Creator-Zeile (rechts oben, gleiche Breite) */}
           <div 
-            className={`absolute top-6 right-8 pointer-events-auto flex items-start gap-4
+            className={`absolute top-6 right-8 pointer-events-auto
+                        flex flex-col items-end
                         transition-transform duration-700 ease-in-out
                         ${focusMode ? 'translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
           >
-            <MusicPlayer
-              className="w-80"
-              playlist={[
-                { title: 'Emotional Ambient Pop', artist: 'EONA', src: '/audio/eona-emotional-ambient-pop-351436.mp3' },
-                { title: 'baroque-trap-412613', artist: 'Local', src: '/audio/baroque-trap-412613.mp3' },
-                { title: 'gothic-black-metal-music', artist: 'Local', src: '/audio/gothic-black-metal-music-no-copyright-383590.mp3' },
-                { title: 'kugelsicher', artist: 'tremoxbeatz', src: '/audio/kugelsicher-by-tremoxbeatz-302838.mp3' },
-                { title: 'nocturne-hip-hop-chopin', artist: 'Local', src: '/audio/nocturne-n20-hip-hop-chopin-160904.mp3' },
-                { title: 'beat-electronic-digital', artist: 'the-last-point', src: '/audio/the-last-point-beat-electronic-digital-394291.mp3' },
-                { title: 'trap-basketball-beat-music', artist: 'Local', src: '/audio/trap-basketball-beat-music-412802.mp3' },
-                { title: 'four-seasons-quotwinterquot', artist: 'vivaldi', src: '/audio/vivaldi-four-seasons-quotwinterquot-rv-297-arr-for-strings-185593.mp3' }
-              ]}
-              autoPlay={false}
-            />
+            {/* Gemeinsamer Breiten-Wrapper */}
+            <div className={`${MUSIC_WIDTH} flex flex-col items-stretch`}>
+              <MusicPlayer
+                className={`${MUSIC_WIDTH}`}
+                playlist={[
+                  { title: 'Emotional Ambient Pop', artist: 'EONA', src: '/audio/eona-emotional-ambient-pop-351436.mp3' },
+                  { title: 'baroque-trap-412613', artist: 'Local', src: '/audio/baroque-trap-412613.mp3' },
+                  { title: 'gothic-black-metal-music', artist: 'Local', src: '/audio/gothic-black-metal-music-no-copyright-383590.mp3' },
+                  { title: 'kugelsicher', artist: 'tremoxbeatz', src: '/audio/kugelsicher-by-tremoxbeatz-302838.mp3' },
+                  { title: 'nocturne-hip-hop-chopin', artist: 'Local', src: '/audio/nocturne-n20-hip-hop-chopin-160904.mp3' },
+                  { title: 'beat-electronic-digital', artist: 'the-last-point', src: '/audio/the-last-point-beat-electronic-digital-394291.mp3' },
+                  { title: 'trap-basketball-beat-music', artist: 'Local', src: '/audio/trap-basketball-beat-music-412802.mp3' },
+                  { title: 'four-seasons-quotwinterquot', artist: 'vivaldi', src: '/audio/vivaldi-four-seasons-quotwinterquot-rv-297-arr-for-strings-185593.mp3' }
+                ]}
+                autoPlay={false}
+              />
+
+              {/* Subtile Creator-Zeile – exakt gleiche Breite, zentral ausgerichtet */}
+              <div className="mt-1 text-[11px] md:text-xs text-gray-400/70 hover:text-gray-200/90 transition-colors text-center">
+                <span>by {CREATOR_NAME} · </span>
+                <a
+                  href={REPO_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="underline underline-offset-2 decoration-white/20 hover:decoration-white/60"
+                  title="Open Source Repository"
+                >
+                  Open Source on GitHub
+                </a>
+                <span className="ml-1">· PRs welcome</span>
+              </div>
+            </div>
           </div>
 
           {/* Export Button */}
