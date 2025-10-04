@@ -4,6 +4,7 @@ import '../index.css'
 // Lazy-Load externe Background-Komponenten
 const LiquidEther = lazy(() => import('../thirdparty/LiquidEther.jsx'))
 const Prism = lazy(() => import('../thirdparty/Prism.jsx'))
+const Lightning = lazy(() => import('../thirdparty/Lightning.jsx'))
 
 export default function BackgroundLayer({ type = 'solid-dark' }) {
   return (
@@ -79,6 +80,20 @@ export default function BackgroundLayer({ type = 'solid-dark' }) {
               bloom={1.2}
               suspendWhenOffscreen={true}
               timeScale={0.4}
+            />
+          </div>
+        </Suspense>
+      )}
+
+      {type === 'lightning' && (
+        <Suspense fallback={<div className="w-full h-full bg-[#000000]" />}>
+          <div className="w-full h-full">
+            <Lightning
+              hue={230}
+              xOffset={0}
+              speed={0.8}
+              intensity={1.2}
+              size={1.0}
             />
           </div>
         </Suspense>

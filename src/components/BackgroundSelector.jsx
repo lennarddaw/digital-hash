@@ -7,6 +7,7 @@ const OPTIONS = [
   { value: 'grid', label: 'Subtle Grid', preview: 'grid' },
   { value: 'liquid-ether', label: 'Liquid Ether', preview: 'ether' },
   { value: 'prism', label: 'Prism', preview: 'prism' },
+  { value: 'lightning', label: 'Lightning', preview: 'lightning' },
 ]
 
 export default function BackgroundSelector({ value, onChange, className = '' }) {
@@ -172,6 +173,17 @@ function PreviewSwatch({ type }) {
         style={{
           background:
             'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)'
+        }}
+      />
+    )
+  }
+  if (type === 'lightning') {
+    return (
+      <span
+        className={common}
+        style={{
+          background:
+            'linear-gradient(90deg, #1e3a8a 0%, #3b82f6 50%, #93c5fd 100%)'
         }}
       />
     )
