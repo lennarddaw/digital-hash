@@ -87,7 +87,7 @@ export default function TechnicalInfoPanel({ bloomData }) {
                 </h3>
                 <div className="bg-white/5 rounded-lg p-4 border border-white/5">
                   <p className="text-gray-300 leading-relaxed">
-                    The Neural Bloom visualization is a multi-dimensional representation of text analysis 
+                    The Hash visualization is a multi-dimensional representation of text analysis 
                     combining <strong>NLP embeddings</strong>, <strong>sentiment analysis</strong>, and 
                     <strong>statistical text features</strong>. Each visual element is derived from 
                     explainable metrics and deterministic algorithms.
@@ -284,7 +284,7 @@ export default function TechnicalInfoPanel({ bloomData }) {
               {/* AI Models */}
               <section>
                 <h3 className="text-lg font-semibold text-white mb-3">
-                  AI Models & Processing Pipeline
+                  ML Models & Processing Pipeline
                 </h3>
                 <div className="bg-white/5 rounded-lg p-4 border border-white/5 space-y-3">
                   <ModelInfo

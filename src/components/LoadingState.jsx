@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from 'react'
  * - Unmountet sauber, sobald die Modelle geladen sind (Komponente wird von App.jsx entfernt).
  * - Barrierefrei via role="progressbar".
  */
-function WhiteProgressBar({ label = 'Loading AI models...' }) {
+function WhiteProgressBar({ label = 'Loading ML models...' }) {
   const [value, setValue] = useState(0) // 0..100
   const rafRef = useRef(0)
   const tRef = useRef(0)
@@ -57,7 +57,7 @@ function WhiteProgressBar({ label = 'Loading AI models...' }) {
 export default function LoadingState({ type }) {
   if (type === 'model') {
     // Weißer Balken anstelle des Spinners
-    return <WhiteProgressBar label="Loading AI models" />
+    return <WhiteProgressBar label="Loading ML models" />
   }
 
   // Fallback: bisheriger Analyse-Spinner
