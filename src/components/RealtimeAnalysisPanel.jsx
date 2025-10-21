@@ -14,18 +14,18 @@ export default function RealtimeAnalysisPanel({
 }) {
   const [activeView, setActiveView] = useState('overview')
   const [expandedSections, setExpandedSections] = useState({
-    tokens: false,
-    sentences: false,
+    tokens: true,
+    sentences: true,
     statistics: true,
     mapping: true,
-    technical: false,
-    embedding: false,
-    bloomDetails: false,
-    emotionHints: false,
-    distributions: false,
-    advanced: false,
-    geometry: false,
-    colors: false
+    technical: true,
+    embedding: true,
+    bloomDetails: true,
+    emotionHints: true,
+    distributions: true,
+    advanced: true,
+    geometry: true,
+    colors: true
   })
 
   if (!analysisResult || !bloomData) {
@@ -556,7 +556,7 @@ function Section({ title, expanded, onToggle, children }) {
   )
 }
 
-function Metric({ label, value, inline = false }) {
+function Metric({ label, value, inline = true }) {
   if (inline) {
     return (
       <div>
