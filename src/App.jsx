@@ -200,14 +200,13 @@ export default function App() {
           {hasBloom && (
             <button
               onClick={() => setShowAnalysis(prev => !prev)}
-              className="mt-4 px-4 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 
-                         text-blue-300 border border-blue-500/30 font-medium transition-all 
-                         flex items-center gap-2 glow-blue"
+              className="mt-4 px-4 py-2 rounded minimal-btn
+                         flex items-center gap-2 text-sm font-medium"
               title="Toggle Analysis Pipeline (Hotkey: A)"
             >
-              <Activity size={18} />
+              <Activity size={16} />
               {showAnalysis ? 'Hide' : 'Show'} Analysis Pipeline
-              <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-white/10 rounded border border-white/20">
+              <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-white/5 rounded border border-white/10 text-gray-500">
                 A
               </kbd>
             </button>
@@ -321,32 +320,29 @@ export default function App() {
       {showAnalysis && hasBloom && (
         <div 
           className="absolute inset-0 pointer-events-auto z-50
-                     animate-in fade-in duration-500"
+                     minimal-fade-in"
           style={{
-            background: 'radial-gradient(circle at 50% 30%, rgba(30, 41, 59, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%)',
-            backdropFilter: 'blur(20px)',
-            WebkitBackdropFilter: 'blur(20px)',
+            background: 'linear-gradient(180deg, rgba(10, 10, 10, 0.98) 0%, rgba(0, 0, 0, 0.99) 100%)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
           }}
         >
           {/* Close Button - Top Right */}
           <button
             onClick={() => setShowAnalysis(false)}
-            className="absolute top-6 right-6 p-3 rounded-full
-                       bg-white/5 hover:bg-white/10 border border-white/10
-                       text-gray-300 hover:text-white
-                       transition-all duration-300 hover:scale-110
-                       glow-blue group"
+            className="absolute top-6 right-6 p-3 rounded
+                       close-btn-minimal group"
             title="Close Analysis (ESC)"
           >
-            <X size={24} />
-            <span className="absolute -bottom-8 right-0 text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+            <X size={20} />
+            <span className="absolute -bottom-7 right-0 text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
               ESC
             </span>
           </button>
 
           {/* Main Content - Centered, Full Width */}
-          <div className="w-full h-full overflow-y-auto nice-scroll p-8 flex items-start justify-center">
-            <div className="w-full max-w-7xl animate-in slide-in-from-bottom duration-700">
+          <div className="w-full h-full overflow-y-auto minimal-scroll p-8 flex items-start justify-center">
+            <div className="w-full max-w-7xl minimal-slide-up">
               <RealtimeAnalysisPanel
                 bloomData={bloomData}
                 analysisResult={analysisResult}
@@ -354,20 +350,6 @@ export default function App() {
                 onToggle={() => setShowAnalysis(false)}
               />
             </div>
-          </div>
-
-          {/* Decorative Elements */}
-          <div className="absolute inset-0 pointer-events-none overflow-hidden">
-            {/* Top Glow */}
-            <div 
-              className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-32 
-                         bg-gradient-to-b from-blue-500/10 to-transparent blur-3xl"
-            />
-            {/* Bottom Glow */}
-            <div 
-              className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-32 
-                         bg-gradient-to-t from-purple-500/10 to-transparent blur-3xl"
-            />
           </div>
         </div>
       )}

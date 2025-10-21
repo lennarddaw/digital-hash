@@ -213,3 +213,233 @@ body {
     font-size: 0.85rem;
   }
 }
+
+/* Minimal Analysis Panel Styles - Add to index.css */
+
+/* Remove all glow effects */
+.glow-blue,
+.glow-purple,
+.glow-green {
+  box-shadow: none !important;
+}
+
+/* Subtle transitions only */
+.analysis-card {
+  transition: background-color 0.2s ease;
+}
+
+.analysis-card:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Minimal progress bars - no gradients */
+.progress-bar {
+  transition: width 0.3s ease;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Token hover - subtle only */
+.token-hover {
+  transition: background-color 0.15s ease;
+}
+
+.token-hover:hover {
+  transform: none;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Overlay background - darker, less blur */
+.analysis-overlay-bg {
+  background: linear-gradient(180deg, 
+    rgba(10, 10, 10, 0.98) 0%, 
+    rgba(0, 0, 0, 0.99) 100%
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Remove decorative glows */
+.decorative-glow {
+  display: none;
+}
+
+/* Minimal section headers */
+.analysis-section-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Monospace data display */
+.data-mono {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  letter-spacing: -0.01em;
+}
+
+/* Subtle borders only */
+.minimal-border {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.minimal-border-t {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Clean button styles */
+.minimal-btn {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s ease;
+}
+
+.minimal-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.minimal-btn.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Collapsible sections */
+.section-collapsed {
+  max-height: 48px;
+  overflow: hidden;
+}
+
+.section-expanded {
+  max-height: none;
+}
+
+/* Grid layouts for data */
+.data-grid {
+  display: grid;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.data-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.data-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.data-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* Metric cards - minimal */
+.metric-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+}
+
+.metric-label {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.metric-value {
+  color: rgba(255, 255, 255, 0.8);
+  font-family: 'SF Mono', 'Monaco', monospace;
+  font-size: 0.875rem;
+}
+
+/* Table-like layouts */
+.data-table-header {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.data-table-row {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  font-family: 'SF Mono', 'Monaco', monospace;
+  color: rgba(255, 255, 255, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.data-table-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Close button - minimal */
+.close-btn-minimal {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.5);
+  transition: all 0.2s ease;
+}
+
+.close-btn-minimal:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Scrollbar - even more minimal */
+.minimal-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.minimal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.minimal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+
+.minimal-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.minimal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+/* Animation - subtle only */
+@keyframes minimal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes minimal-slide-up {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.minimal-fade-in {
+  animation: minimal-fade-in 0.3s ease;
+}
+
+.minimal-slide-up {
+  animation: minimal-slide-up 0.4s ease;
+}
