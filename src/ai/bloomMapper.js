@@ -338,6 +338,11 @@ export function mapToBloomData(analysisResult) {
 
 /* ------------------ MULTI-GEOMETRIE-SYSTEM ------------------ */
 
+function clamp01(x) {
+  if (!Number.isFinite(x)) return 0
+  return Math.max(0, Math.min(1, x))
+}
+
 function calculateGeometryWeights(rhythm, repetition, syntaxComplexity, coherence, style, sentiment, questionScore, emphasis, diversity) {
   // Jede Geometrie bekommt einen Weight 0-1
   // Mehrere können gleichzeitig aktiv sein!

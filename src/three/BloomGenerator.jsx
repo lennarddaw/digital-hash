@@ -50,7 +50,7 @@ export default function BloomGenerator({ params, onInspect }) {
   /* =========================
      1) ALLE GEOMETRIEN GENERIEREN (Hybrid-System)
      ========================= */
-  const geometries = useMemo(() => {
+  const { allGeometries, baseColor } = useMemo(() => {
     const baseColor = new THREE.Color(color || '#00d4ff')
     const center = new THREE.Vector3(0, CENTER_Y, 0)
     const angleRadGlobal = (angle * Math.PI) / 180
@@ -688,7 +688,7 @@ export default function BloomGenerator({ params, onInspect }) {
   return (
     <group ref={groupRef}>
       {/* Render all active geometries */}
-      {Object.entries(geometries.allGeometries).map(([name, geom]) => (
+      {Object.entries(allGeometries).map(([name, geom]) => (
         <group key={name}>
           {/* Lines */}
           <lineSegments
@@ -711,7 +711,7 @@ export default function BloomGenerator({ params, onInspect }) {
             }}
           >
             <lineBasicMaterial
-              color={geometries.baseColor}
+              color={baseColor}
               transparent
               opacity={geom.opacity * 0.7}
               blending={THREE.AdditiveBlending}
@@ -724,7 +724,7 @@ export default function BloomGenerator({ params, onInspect }) {
           >
             <pointsMaterial
               size={0.14}
-              color={geometries.baseColor}
+              color={baseColor}
               transparent
               opacity={geom.opacity * 0.35}
               blending={THREE.AdditiveBlending}
@@ -816,7 +816,7 @@ export default function BloomGenerator({ params, onInspect }) {
       <mesh position={[0, CENTER_Y, 0]}>
         <sphereGeometry args={[0.32, 20, 20]} />
         <meshBasicMaterial
-          color={geometries.baseColor}
+          color={baseColor}
           transparent
           opacity={0.65}
           blending={THREE.AdditiveBlending}
