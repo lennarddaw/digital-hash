@@ -41,3 +41,405 @@ body {
   scrollbar-width: thin;
   scrollbar-color: rgba(255,255,255,0.32) transparent;
 }
+
+/* ============================================
+   Analysis Panel Animations
+   ============================================ */
+
+@keyframes slide-in-from-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-from-bottom {
+  from {
+    transform: translateY(30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-in {
+  animation-fill-mode: both;
+}
+
+.slide-in-from-right {
+  animation-name: slide-in-from-right;
+}
+
+.fade-in {
+  animation-name: fade-in;
+}
+
+.duration-200 {
+  animation-duration: 200ms;
+}
+
+.duration-300 {
+  animation-duration: 300ms;
+}
+
+/* ============================================
+   Color Utilities for Dynamic Styling
+   ============================================ */
+
+:root {
+  --blue-500: #3b82f6;
+  --purple-500: #a855f7;
+  --pink-500: #ec4899;
+  --green-500: #22c55e;
+  --yellow-500: #eab308;
+  --red-500: #ef4444;
+  --gray-500: #6b7280;
+}
+
+/* ============================================
+   Token Hover Effects
+   ============================================ */
+
+.token-hover {
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.token-hover:hover {
+  transform: scale(1.1);
+}
+
+/* ============================================
+   Smooth Transitions
+   ============================================ */
+
+.transition-width {
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-opacity {
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* ============================================
+   Analysis Panel Specific Styles
+   ============================================ */
+
+.analysis-panel-container {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.analysis-card {
+  transition: all 0.2s ease-in-out;
+}
+
+.analysis-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* ============================================
+   Progress Bars
+   ============================================ */
+
+.progress-bar {
+  transition: width 0.3s ease-in-out;
+  background: linear-gradient(90deg, 
+    var(--blue-500) 0%, 
+    var(--purple-500) 50%, 
+    var(--pink-500) 100%
+  );
+}
+
+/* ============================================
+   Glow Effects
+   ============================================ */
+
+.glow-blue {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+}
+
+.glow-purple {
+  box-shadow: 0 0 20px rgba(168, 85, 247, 0.4);
+}
+
+.glow-green {
+  box-shadow: 0 0 20px rgba(34, 197, 94, 0.4);
+}
+
+/* ============================================
+   Responsive Breakpoints
+   ============================================ */
+
+@media (max-width: 1024px) {
+  .analysis-panel-container {
+    font-size: 0.9rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .nice-scroll::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  
+  .analysis-panel-container {
+    font-size: 0.85rem;
+  }
+}
+
+/* Minimal Analysis Panel Styles - Add to index.css */
+
+/* Remove all glow effects */
+.glow-blue,
+.glow-purple,
+.glow-green {
+  box-shadow: none !important;
+}
+
+/* Subtle transitions only */
+.analysis-card {
+  transition: background-color 0.2s ease;
+}
+
+.analysis-card:hover {
+  background-color: rgba(255, 255, 255, 0.02);
+  transform: none;
+  box-shadow: none;
+}
+
+/* Minimal progress bars - no gradients */
+.progress-bar {
+  transition: width 0.3s ease;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+/* Token hover - subtle only */
+.token-hover {
+  transition: background-color 0.15s ease;
+}
+
+.token-hover:hover {
+  transform: none;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Overlay background - darker, less blur */
+.analysis-overlay-bg {
+  background: linear-gradient(180deg, 
+    rgba(10, 10, 10, 0.98) 0%, 
+    rgba(0, 0, 0, 0.99) 100%
+  );
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+/* Remove decorative glows */
+.decorative-glow {
+  display: none;
+}
+
+/* Minimal section headers */
+.analysis-section-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  padding-bottom: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+/* Monospace data display */
+.data-mono {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', monospace;
+  font-size: 0.75rem;
+  letter-spacing: -0.01em;
+}
+
+/* Subtle borders only */
+.minimal-border {
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.minimal-border-t {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Clean button styles */
+.minimal-btn {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.7);
+  transition: all 0.2s ease;
+}
+
+.minimal-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.minimal-btn.active {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 1);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Collapsible sections */
+.section-collapsed {
+  max-height: 48px;
+  overflow: hidden;
+}
+
+.section-expanded {
+  max-height: none;
+}
+
+/* Grid layouts for data */
+.data-grid {
+  display: grid;
+  gap: 0.75rem;
+  font-size: 0.75rem;
+}
+
+.data-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.data-grid-3 { grid-template-columns: repeat(3, 1fr); }
+.data-grid-4 { grid-template-columns: repeat(4, 1fr); }
+
+/* Metric cards - minimal */
+.metric-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 0.25rem;
+  padding: 0.5rem;
+}
+
+.metric-label {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.metric-value {
+  color: rgba(255, 255, 255, 0.8);
+  font-family: 'SF Mono', 'Monaco', monospace;
+  font-size: 0.875rem;
+}
+
+/* Table-like layouts */
+.data-table-header {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.625rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.data-table-row {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  font-size: 0.75rem;
+  font-family: 'SF Mono', 'Monaco', monospace;
+  color: rgba(255, 255, 255, 0.7);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+}
+
+.data-table-row:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* Close button - minimal */
+.close-btn-minimal {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.5);
+  transition: all 0.2s ease;
+}
+
+.close-btn-minimal:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Scrollbar - even more minimal */
+.minimal-scroll::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.minimal-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.minimal-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+}
+
+.minimal-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.minimal-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+/* Animation - subtle only */
+@keyframes minimal-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes minimal-slide-up {
+  from {
+    transform: translateY(10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.minimal-fade-in {
+  animation: minimal-fade-in 0.3s ease;
+}
+
+.minimal-slide-up {
+  animation: minimal-slide-up 0.4s ease;
+}

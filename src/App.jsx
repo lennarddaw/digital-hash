@@ -10,14 +10,17 @@ import InspectPanel from './components/InspectPanel.jsx'
 import BackgroundSelector from './components/BackgroundSelector.jsx'
 import FocusModeToggle from './components/FocusModeToggle.jsx'
 import TechnicalInfoPanel from './components/TechnicalInfoPanel.jsx'
+import RealtimeAnalysisPanel from './components/RealtimeAnalysisPanel.jsx'
+import { Activity, X } from 'lucide-react'
 
 export default function App() {
   const [userText, setUserText] = useState('')
   const [inspectTarget, setInspectTarget] = useState(null)
   const [bgType, setBgType] = useState('solid-dark')
   const [focusMode, setFocusMode] = useState(false)
+  const [showAnalysis, setShowAnalysis] = useState(false)
 
-  const { bloomData, isAnalyzing, isModelLoading } = useTextAnalysis(userText)
+  const { bloomData, analysisResult, isAnalyzing, isModelLoading } = useTextAnalysis(userText)
 
   const hasBloom = !!bloomData
   const meta = bloomData?.metadata
@@ -30,7 +33,7 @@ export default function App() {
   // Unified width for music player and creator line
   const MUSIC_WIDTH = 'w-80' // 20rem; adjust centrally if needed
 
-  // Keyboard shortcuts for Focus Mode
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e) => {
       // Toggle focus mode with 'F' key (when not typing in input fields)
@@ -41,16 +44,31 @@ export default function App() {
         setFocusMode(prev => !prev)
       }
       
+      // Toggle analysis panel with 'A' key (when not typing in input fields)
+      if ((e.key === 'a' || e.key === 'A') && 
+          e.target.tagName !== 'TEXTAREA' && 
+          e.target.tagName !== 'INPUT' &&
+          hasBloom) {
+        e.preventDefault()
+        setShowAnalysis(prev => !prev)
+      }
+      
       // Exit focus mode with Escape
       if (e.key === 'Escape' && focusMode) {
         e.preventDefault()
         setFocusMode(false)
       }
+
+      // Close analysis panel with Escape
+      if (e.key === 'Escape' && showAnalysis) {
+        e.preventDefault()
+        setShowAnalysis(false)
+      }
     }
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [focusMode])
+  }, [focusMode, showAnalysis, hasBloom])
 
   return (
     <div className="w-full h-full relative overflow-hidden">
@@ -71,7 +89,9 @@ export default function App() {
       <div 
         className={`absolute inset-0 pointer-events-none nice-scroll
                     transition-transform duration-700 ease-in-out
-                    ${focusMode ? '-translate-x-full' : 'translate-x-0'}`}
+                    ${focusMode ? '-translate-x-full' : 
+                      showAnalysis ? '-translate-x-[calc(100%+2rem)]' : 
+                      'translate-x-0'}`}
       >
         <div className="pointer-events-auto p-8 max-w-2xl">
           {/* Header */}
@@ -97,7 +117,6 @@ export default function App() {
           {/* Loading States */}
           {isModelLoading && <LoadingState type="model" />}
           {isAnalyzing && <LoadingState type="analysis" />}
-
 
           {/* Metrics Panel - Only visible when bloom data exists */}
           {hasBloom && (
@@ -172,14 +191,30 @@ export default function App() {
             </div>
           )}
 
-                    {/* Technical Info Button - Always visible, enabled when data exists */}
+          {/* Technical Info Button */}
           <div className="mt-4">
             <TechnicalInfoPanel bloomData={bloomData} />
           </div>
+
+          {/* Analysis Panel Toggle Button */}
+          {hasBloom && (
+            <button
+              onClick={() => setShowAnalysis(prev => !prev)}
+              className="mt-4 px-4 py-2 rounded minimal-btn
+                         flex items-center gap-2 text-sm font-medium"
+              title="Toggle Analysis Pipeline (Hotkey: A)"
+            >
+              <Activity size={16} />
+              {showAnalysis ? 'Hide' : 'Show'} Analysis Pipeline
+              <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-white/5 rounded border border-white/10 text-gray-500">
+                A
+              </kbd>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* ============ RIGHT SIDE UI OVERLAY ============ */}
+      {/* ============ RIGHT SIDE UI ELEMENTS ============ */}
       {hasBloom && (
         <>
           {/* Music Player + Creator Line - Top Right */}
@@ -187,7 +222,7 @@ export default function App() {
             className={`absolute top-6 right-8 pointer-events-auto
                         flex flex-col items-end
                         transition-transform duration-700 ease-in-out
-                        ${focusMode ? 'translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
+                        ${focusMode || showAnalysis ? 'translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
           >
             {/* Unified width wrapper */}
             <div className={`${MUSIC_WIDTH} flex flex-col items-stretch`}>
@@ -263,7 +298,7 @@ export default function App() {
           <div 
             className={`absolute bottom-8 right-8 pointer-events-auto
                         transition-transform duration-700 ease-in-out
-                        ${focusMode ? 'translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
+                        ${focusMode || showAnalysis ? 'translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
           >
             <ExportButton />
           </div>
@@ -273,13 +308,70 @@ export default function App() {
       {/* ============ INSPECT PANEL - Bottom Left ============ */}
       <div 
         className={`transition-transform duration-700 ease-in-out
-                    ${focusMode ? '-translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
+                    ${focusMode || showAnalysis ? '-translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
       >
         <InspectPanel 
           target={inspectTarget} 
           onClose={() => setInspectTarget(null)} 
         />
       </div>
+
+      {/* ============ FULLSCREEN ANALYSIS OVERLAY ============ */}
+      {showAnalysis && hasBloom && (
+        <div 
+          className="absolute inset-0 pointer-events-auto z-50
+                     minimal-fade-in"
+          style={{
+            background: 'linear-gradient(180deg, rgba(10, 10, 10, 0.98) 0%, rgba(0, 0, 0, 0.99) 100%)',
+            backdropFilter: 'blur(10px)',
+            WebkitBackdropFilter: 'blur(10px)',
+          }}
+        >
+          {/* Close Button - Top Right */}
+          <button
+            onClick={() => setShowAnalysis(false)}
+            className="absolute top-6 right-6 p-3 rounded
+                       close-btn-minimal group"
+            title="Close Analysis (ESC)"
+          >
+            <X size={20} />
+            <span className="absolute -bottom-7 right-0 text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
+              ESC
+            </span>
+          </button>
+
+          {/* Main Content - Centered, Full Width */}
+          <div className="w-full h-full overflow-y-auto minimal-scroll p-8 flex items-start justify-center">
+            <div className="w-full max-w-7xl minimal-slide-up">
+              <RealtimeAnalysisPanel
+                bloomData={bloomData}
+                analysisResult={analysisResult}
+                isVisible={showAnalysis}
+                onToggle={() => setShowAnalysis(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ============ KEYBOARD SHORTCUTS HINT ============ */}
+      {hasBloom && !focusMode && !showAnalysis && (
+        <div className="absolute bottom-8 left-8 pointer-events-none">
+          <div className="bg-black/60 rounded-lg px-3 py-2 border border-white/10 text-xs text-gray-400
+                          backdrop-blur-md">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-white/10 rounded border border-white/20 text-white">F</kbd>
+                <span>Focus</span>
+              </div>
+              <div className="flex items-center gap-1">
+                <kbd className="px-1.5 py-0.5 bg-white/10 rounded border border-white/20 text-white">A</kbd>
+                <span>Analysis</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
