@@ -18,7 +18,10 @@ export default function RealtimeAnalysisPanel({
     sentences: false,
     statistics: true,
     mapping: true,
-    technical: false
+    technical: false,
+    embedding: false,
+    bloomDetails: false,
+    emotionHints: false
   })
 
   if (!analysisResult || !bloomData) {
@@ -205,7 +208,7 @@ export default function RealtimeAnalysisPanel({
 
   const TechnicalSection = () => (
     <div className="space-y-6">
-      <Section title="Embedding Vector" expanded={false} onToggle={() => {}}>
+      <Section title="Embedding Vector" expanded={expandedSections.embedding} onToggle={() => toggleSection('embedding')}>
         <div className="text-xs font-mono text-gray-500 space-y-1">
           <div>Dimensions: {embedding.length}</div>
           <div className="grid grid-cols-8 gap-2 mt-2">
@@ -221,7 +224,7 @@ export default function RealtimeAnalysisPanel({
         </div>
       </Section>
 
-      <Section title="Bloom Structure Details" expanded={false} onToggle={() => {}}>
+      <Section title="Bloom Structure Details" expanded={expandedSections.bloomDetails} onToggle={() => toggleSection('bloomDetails')}>
         <div className="grid grid-cols-3 gap-4 text-xs">
           <Metric label="Total Rings" value={structure.rings?.length || 0} />
           <Metric label="Total Nodes" value={structure.nodes?.length || 0} />
@@ -232,7 +235,7 @@ export default function RealtimeAnalysisPanel({
         </div>
       </Section>
 
-      <Section title="Emotion Hints" expanded={false} onToggle={() => {}}>
+      <Section title="Emotion Hints" expanded={expandedSections.emotionHints} onToggle={() => toggleSection('emotionHints')}>
         <div className="grid grid-cols-4 gap-4 text-xs">
           {Object.entries(hints.emotionHints || {}).map(([key, value]) => (
             <Metric key={key} label={key} value={value} />
