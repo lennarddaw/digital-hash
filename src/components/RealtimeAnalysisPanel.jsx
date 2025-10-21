@@ -209,18 +209,17 @@ export default function RealtimeAnalysisPanel({
   const TechnicalSection = () => (
     <div className="space-y-6">
       <Section title="Embedding Vector" expanded={expandedSections.embedding} onToggle={() => toggleSection('embedding')}>
-        <div className="text-xs font-mono text-gray-500 space-y-1">
-          <div>Dimensions: {embedding.length}</div>
-          <div className="grid grid-cols-8 gap-2 mt-2">
-            {embedding.slice(0, 16).map((val, i) => (
-              <div key={i} className="text-gray-600">
-                <span className="text-gray-700">[{i}]</span> {val.toFixed(4)}
-              </div>
-            ))}
+        <div className="text-xs font-mono text-gray-500 space-y-2">
+          <div className="text-gray-400">Dimensions: {embedding.length}</div>
+          <div className="max-h-96 overflow-y-auto minimal-scroll bg-black/20 border border-white/5 rounded p-3">
+            <div className="grid grid-cols-8 gap-2">
+              {embedding.map((val, i) => (
+                <div key={i} className="text-gray-600 hover:text-gray-400 transition-colors">
+                  <span className="text-gray-700">[{i}]</span> {val.toFixed(4)}
+                </div>
+              ))}
+            </div>
           </div>
-          {embedding.length > 16 && (
-            <div className="text-gray-700 pt-2">... and {embedding.length - 16} more dimensions</div>
-          )}
         </div>
       </Section>
 
