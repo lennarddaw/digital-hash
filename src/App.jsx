@@ -191,11 +191,6 @@ export default function App() {
             </div>
           )}
 
-          {/* Technical Info Button */}
-          <div className="mt-4">
-            <TechnicalInfoPanel bloomData={bloomData} />
-          </div>
-
           {/* Analysis Panel Toggle Button */}
           {hasBloom && (
             <button
@@ -232,7 +227,7 @@ export default function App() {
                 className={`${MUSIC_WIDTH}`}
                 playlist={[
                   { 
-                    title: 'Emotional Ambient Pop', 
+                    title: 'Ambient Pop', 
                     artist: 'EONA', 
                     src: '/audio/eona-emotional-ambient-pop-351436.mp3' 
                   },
@@ -349,25 +344,6 @@ export default function App() {
                 isVisible={showAnalysis}
                 onToggle={() => setShowAnalysis(false)}
               />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* ============ KEYBOARD SHORTCUTS HINT ============ */}
-      {hasBloom && !focusMode && !showAnalysis && (
-        <div className="absolute bottom-8 left-8 pointer-events-none">
-          <div className="bg-black/60 rounded-lg px-3 py-2 border border-white/10 text-xs text-gray-400
-                          backdrop-blur-md">
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-white/10 rounded border border-white/20 text-white">F</kbd>
-                <span>Focus</span>
-              </div>
-              <div className="flex items-center gap-1">
-                <kbd className="px-1.5 py-0.5 bg-white/10 rounded border border-white/20 text-white">A</kbd>
-                <span>Analysis</span>
-              </div>
             </div>
           </div>
         </div>
