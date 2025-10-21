@@ -33,7 +33,7 @@ export default function App() {
   // Unified width for music player and creator line
   const MUSIC_WIDTH = 'w-80' // 20rem; adjust centrally if needed
 
-  // Keyboard shortcuts for Focus Mode and Analysis Panel
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e) => {
       // Toggle focus mode with 'F' key (when not typing in input fields)
@@ -85,158 +85,137 @@ export default function App() {
         onToggle={() => setFocusMode(prev => !prev)} 
       />
 
-      {/* ============ MAIN CONTENT LAYOUT ============ */}
-      <div className="absolute inset-0 pointer-events-none flex">
-        
-        {/* LEFT COLUMN - Input & Controls */}
-        <div 
-          className={`nice-scroll overflow-y-auto pointer-events-none
-                      transition-all duration-700 ease-in-out
-                      ${showAnalysis && hasBloom ? 'w-1/2' : 'w-full'}
-                      ${focusMode ? '-translate-x-full' : 'translate-x-0'}`}
-        >
-          <div className="pointer-events-auto p-8 max-w-2xl">
-            {/* Header */}
-            <h1 className="text-4xl font-bold mb-2 text-white">
-              Hash
-            </h1>
-            <p className="text-gray-400 mb-6">
-              Transform your thoughts into living structures
-            </p>
+      {/* ============ LEFT SIDE UI OVERLAY ============ */}
+      <div 
+        className={`absolute inset-0 pointer-events-none nice-scroll
+                    transition-transform duration-700 ease-in-out
+                    ${focusMode ? '-translate-x-full' : 
+                      showAnalysis ? '-translate-x-[calc(100%+2rem)]' : 
+                      'translate-x-0'}`}
+      >
+        <div className="pointer-events-auto p-8 max-w-2xl">
+          {/* Header */}
+          <h1 className="text-4xl font-bold mb-2 text-white">
+            Hash
+          </h1>
+          <p className="text-gray-400 mb-6">
+            Transform your thoughts into living structures
+          </p>
 
-            {/* Background Selector */}
-            <div className="mb-4">
-              <BackgroundSelector value={bgType} onChange={setBgType} />
-            </div>
+          {/* Background Selector */}
+          <div className="mb-4">
+            <BackgroundSelector value={bgType} onChange={setBgType} />
+          </div>
 
-            {/* Text Input */}
-            <TextInput
-              value={userText}
-              onChange={setUserText}
-              disabled={isAnalyzing}
-            />
+          {/* Text Input */}
+          <TextInput
+            value={userText}
+            onChange={setUserText}
+            disabled={isAnalyzing}
+          />
 
-            {/* Loading States */}
-            {isModelLoading && <LoadingState type="model" />}
-            {isAnalyzing && <LoadingState type="analysis" />}
+          {/* Loading States */}
+          {isModelLoading && <LoadingState type="model" />}
+          {isAnalyzing && <LoadingState type="analysis" />}
 
-            {/* Metrics Panel - Only visible when bloom data exists */}
-            {hasBloom && (
-              <div className="pointer-events-auto p-4 mt-4 bg-white/5 border border-white/10 
-                              rounded-lg backdrop-blur-sm max-w-md">
-                <div className="text-sm text-gray-200 grid grid-cols-2 gap-x-6 gap-y-2">
-                  
-                  <div>
-                    <span className="text-gray-400">Sentiment:</span>{' '}
-                    <span className="font-medium">
-                      {meta?.sentiment ?? '—'}
+          {/* Metrics Panel - Only visible when bloom data exists */}
+          {hasBloom && (
+            <div className="pointer-events-auto p-4 mt-4 bg-white/5 border border-white/10 
+                            rounded-lg backdrop-blur-sm max-w-md">
+              <div className="text-sm text-gray-200 grid grid-cols-2 gap-x-6 gap-y-2">
+                
+                <div>
+                  <span className="text-gray-400">Sentiment:</span>{' '}
+                  <span className="font-medium">
+                    {meta?.sentiment ?? '—'}
+                  </span>
+                  {typeof meta?.confidence === 'number' && (
+                    <span className="text-gray-400">
+                      {' '}(confidence {meta.confidence.toFixed(2)})
                     </span>
-                    {typeof meta?.confidence === 'number' && (
-                      <span className="text-gray-400">
-                        {' '}(confidence {meta.confidence.toFixed(2)})
-                      </span>
-                    )}
-                  </div>
-                  
-                  <div>
-                    <span className="text-gray-400">Words:</span>{' '}
-                    <span className="font-medium">{meta?.wordCount ?? '—'}</span>
-                  </div>
-
-                  <div>
-                    <span className="text-gray-400">Branches (#Sentences):</span>{' '}
-                    <span className="font-medium">{struct?.branches ?? '—'}</span>
-                  </div>
-                  
-                  <div>
-                    <span className="text-gray-400">Complexity:</span>{' '}
-                    <span className="font-medium">{struct?.complexity ?? '—'}</span>
-                  </div>
-
-                  <div>
-                    <span className="text-gray-400">Symmetry:</span>{' '}
-                    <span className="font-medium">
-                      {typeof struct?.symmetry === 'number' 
-                        ? struct.symmetry.toFixed(2) 
-                        : '—'}
-                    </span>
-                  </div>
-                  
-                  <div>
-                    <span className="text-gray-400">Angle (°):</span>{' '}
-                    <span className="font-medium">
-                      {typeof struct?.angle === 'number' 
-                        ? struct.angle.toFixed(1) 
-                        : '—'}
-                    </span>
-                  </div>
-
-                  <div>
-                    <span className="text-gray-400">Question Score:</span>{' '}
-                    <span className="font-medium">
-                      {typeof meta?.questionScore === 'number' 
-                        ? meta.questionScore.toFixed(2) 
-                        : '—'}
-                    </span>
-                  </div>
-                  
-                  <div>
-                    <span className="text-gray-400">Emphasis:</span>{' '}
-                    <span className="font-medium">
-                      {typeof meta?.emphasisScore === 'number' 
-                        ? meta.emphasisScore.toFixed(2) 
-                        : '—'}
-                    </span>
-                  </div>
-
+                  )}
                 </div>
+                
+                <div>
+                  <span className="text-gray-400">Words:</span>{' '}
+                  <span className="font-medium">{meta?.wordCount ?? '—'}</span>
+                </div>
+
+                <div>
+                  <span className="text-gray-400">Branches (#Sentences):</span>{' '}
+                  <span className="font-medium">{struct?.branches ?? '—'}</span>
+                </div>
+                
+                <div>
+                  <span className="text-gray-400">Complexity:</span>{' '}
+                  <span className="font-medium">{struct?.complexity ?? '—'}</span>
+                </div>
+
+                <div>
+                  <span className="text-gray-400">Symmetry:</span>{' '}
+                  <span className="font-medium">
+                    {typeof struct?.symmetry === 'number' 
+                      ? struct.symmetry.toFixed(2) 
+                      : '—'}
+                  </span>
+                </div>
+                
+                <div>
+                  <span className="text-gray-400">Angle (°):</span>{' '}
+                  <span className="font-medium">
+                    {typeof struct?.angle === 'number' 
+                      ? struct.angle.toFixed(1) 
+                      : '—'}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-gray-400">Question Score:</span>{' '}
+                  <span className="font-medium">
+                    {typeof meta?.questionScore === 'number' 
+                      ? meta.questionScore.toFixed(2) 
+                      : '—'}
+                  </span>
+                </div>
+                
+                <div>
+                  <span className="text-gray-400">Emphasis:</span>{' '}
+                  <span className="font-medium">
+                    {typeof meta?.emphasisScore === 'number' 
+                      ? meta.emphasisScore.toFixed(2) 
+                      : '—'}
+                  </span>
+                </div>
+
               </div>
-            )}
-
-            {/* Technical Info Button */}
-            <div className="mt-4">
-              <TechnicalInfoPanel bloomData={bloomData} />
             </div>
+          )}
 
-            {/* Analysis Panel Toggle Button */}
-            {hasBloom && (
-              <button
-                onClick={() => setShowAnalysis(prev => !prev)}
-                className="mt-4 px-4 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 
-                           text-blue-300 border border-blue-500/30 font-medium transition-all 
-                           flex items-center gap-2 glow-blue"
-                title="Toggle Analysis Pipeline (Hotkey: A)"
-              >
-                <Activity size={18} />
-                {showAnalysis ? 'Hide' : 'Show'} Analysis Pipeline
-                <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-white/10 rounded border border-white/20">
-                  A
-                </kbd>
-              </button>
-            )}
+          {/* Technical Info Button */}
+          <div className="mt-4">
+            <TechnicalInfoPanel bloomData={bloomData} />
           </div>
+
+          {/* Analysis Panel Toggle Button */}
+          {hasBloom && (
+            <button
+              onClick={() => setShowAnalysis(prev => !prev)}
+              className="mt-4 px-4 py-2 rounded-lg bg-blue-500/20 hover:bg-blue-500/30 
+                         text-blue-300 border border-blue-500/30 font-medium transition-all 
+                         flex items-center gap-2 glow-blue"
+              title="Toggle Analysis Pipeline (Hotkey: A)"
+            >
+              <Activity size={18} />
+              {showAnalysis ? 'Hide' : 'Show'} Analysis Pipeline
+              <kbd className="ml-2 px-1.5 py-0.5 text-[10px] bg-white/10 rounded border border-white/20">
+                A
+              </kbd>
+            </button>
+          )}
         </div>
-
-        {/* RIGHT COLUMN - Analysis Panel */}
-        {showAnalysis && hasBloom && (
-          <div 
-            className={`w-1/2 pointer-events-auto overflow-y-auto nice-scroll
-                        transition-all duration-700 ease-in-out
-                        ${focusMode ? 'translate-x-full' : 'translate-x-0'}`}
-          >
-            <div className="p-8">
-              <RealtimeAnalysisPanel
-                bloomData={bloomData}
-                analysisResult={analysisResult}
-                isVisible={showAnalysis}
-                onToggle={() => setShowAnalysis(false)}
-              />
-            </div>
-          </div>
-        )}
       </div>
 
-      {/* ============ FIXED RIGHT SIDE UI ELEMENTS ============ */}
+      {/* ============ RIGHT SIDE UI ELEMENTS ============ */}
       {hasBloom && (
         <>
           {/* Music Player + Creator Line - Top Right */}
@@ -244,7 +223,7 @@ export default function App() {
             className={`absolute top-6 right-8 pointer-events-auto
                         flex flex-col items-end
                         transition-transform duration-700 ease-in-out
-                        ${focusMode ? 'translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
+                        ${focusMode || showAnalysis ? 'translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
           >
             {/* Unified width wrapper */}
             <div className={`${MUSIC_WIDTH} flex flex-col items-stretch`}>
@@ -320,7 +299,7 @@ export default function App() {
           <div 
             className={`absolute bottom-8 right-8 pointer-events-auto
                         transition-transform duration-700 ease-in-out
-                        ${focusMode ? 'translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
+                        ${focusMode || showAnalysis ? 'translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
           >
             <ExportButton />
           </div>
@@ -330,7 +309,7 @@ export default function App() {
       {/* ============ INSPECT PANEL - Bottom Left ============ */}
       <div 
         className={`transition-transform duration-700 ease-in-out
-                    ${focusMode ? '-translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
+                    ${focusMode || showAnalysis ? '-translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
       >
         <InspectPanel 
           target={inspectTarget} 
@@ -338,10 +317,66 @@ export default function App() {
         />
       </div>
 
+      {/* ============ FULLSCREEN ANALYSIS OVERLAY ============ */}
+      {showAnalysis && hasBloom && (
+        <div 
+          className="absolute inset-0 pointer-events-auto z-50
+                     animate-in fade-in duration-500"
+          style={{
+            background: 'radial-gradient(circle at 50% 30%, rgba(30, 41, 59, 0.95) 0%, rgba(0, 0, 0, 0.98) 100%)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
+          }}
+        >
+          {/* Close Button - Top Right */}
+          <button
+            onClick={() => setShowAnalysis(false)}
+            className="absolute top-6 right-6 p-3 rounded-full
+                       bg-white/5 hover:bg-white/10 border border-white/10
+                       text-gray-300 hover:text-white
+                       transition-all duration-300 hover:scale-110
+                       glow-blue group"
+            title="Close Analysis (ESC)"
+          >
+            <X size={24} />
+            <span className="absolute -bottom-8 right-0 text-xs text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity">
+              ESC
+            </span>
+          </button>
+
+          {/* Main Content - Centered, Full Width */}
+          <div className="w-full h-full overflow-y-auto nice-scroll p-8 flex items-start justify-center">
+            <div className="w-full max-w-7xl animate-in slide-in-from-bottom duration-700">
+              <RealtimeAnalysisPanel
+                bloomData={bloomData}
+                analysisResult={analysisResult}
+                isVisible={showAnalysis}
+                onToggle={() => setShowAnalysis(false)}
+              />
+            </div>
+          </div>
+
+          {/* Decorative Elements */}
+          <div className="absolute inset-0 pointer-events-none overflow-hidden">
+            {/* Top Glow */}
+            <div 
+              className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-32 
+                         bg-gradient-to-b from-blue-500/10 to-transparent blur-3xl"
+            />
+            {/* Bottom Glow */}
+            <div 
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1/2 h-32 
+                         bg-gradient-to-t from-purple-500/10 to-transparent blur-3xl"
+            />
+          </div>
+        </div>
+      )}
+
       {/* ============ KEYBOARD SHORTCUTS HINT ============ */}
       {hasBloom && !focusMode && !showAnalysis && (
         <div className="absolute bottom-8 left-8 pointer-events-none">
-          <div className="bg-black/60 rounded-lg px-3 py-2 border border-white/10 text-xs text-gray-400">
+          <div className="bg-black/60 rounded-lg px-3 py-2 border border-white/10 text-xs text-gray-400
+                          backdrop-blur-md">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1">
                 <kbd className="px-1.5 py-0.5 bg-white/10 rounded border border-white/20 text-white">F</kbd>
