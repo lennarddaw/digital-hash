@@ -1,22 +1,10 @@
-// src/ai/textAnalyzer.js
+// src/ai/textAnalyzer.js - ENHANCED VERSION
 import { loadModels } from './modelLoader'
 
-/**
- * Liefert:
- * - embedding: Dokument-Einbettung (Array, normalisiert, mean-pooled)
- * - sentiment: { label: 'POSITIVE'|'NEGATIVE'|'NEUTRAL', score: 0..1 } (kalibriert, satzweise aggregiert)
- * - stats: erklärbare Metriken (Wort/Satz-Zahlen, TTR, Varianzen, ...)
- * - hints: { emotionHints, topicHash } (deterministische Reproduzierbarkeit)
- * - sentences: [{ id, text, start, end, wordCount, signedSentiment, score }]
- * - tokens:    [{ text, idx, charStart, charEnd, sentenceId, len, isUpper, hasPunct, typeTag, salience, emb? }]
- *
- * Hinweis: Um RAM zu schonen, bekommen nur die ersten MAX_TOKENS_EMBED Tokens eine (kurze) Embedding-Slice.
- */
-
 const MAX_SENTS = 60
-const MAX_TOKENS_EMBED = 256           // pro Wort optional Embedding-Slice
-const EMBEDDING_SLICE_DIMS = 12        // kompakte Repräsentation
-const NEUTRAL_MARGIN = 0.15            // Sentiment-Neutralfenster
+const MAX_TOKENS_EMBED = 256
+const EMBEDDING_SLICE_DIMS = 12
+const NEUTRAL_MARGIN = 0.15
 
 export async function analyzeText(text) {
   if (!text || text.trim().length === 0) return null
@@ -24,34 +12,42 @@ export async function analyzeText(text) {
   try {
     const { embeddingModel, sentimentModel } = await loadModels()
 
-    // ---------- Preprocessing: Sätze & Tokens mit Offsets ----------
     const sentences = splitSentencesWithOffsets(text).slice(0, MAX_SENTS)
     const tokens = tokenizeWithOffsets(text)
+    const words = tokens.filter((t) => t.typeTag !== 'PUNCT')
+    
+    // ---------- NEUE ERWEITERTE METRIKEN ----------
+    
+    // Rhythmus-Analyse
+    const rhythm = analyzeRhythm(words, sentences)
+    
+    // Wiederholungen
+    const repetition = analyzeRepetition(words)
+    
+    // Satzstruktur-Komplexität
+    const syntaxComplexity = analyzeSyntaxComplexity(sentences, tokens)
+    
+    // Semantische Kohärenz (basierend auf Satzübergängen)
+    const coherence = analyzeSentenceCoherence(sentences)
+    
+    // Stilistische Merkmale
+    const style = analyzeStyle(text, words, sentences)
 
-    // ---------- Basis-Statistiken ----------
-    const words = tokens.filter((t) => t.typeTag !== 'PUNCT') // "echte" Wörter
+    // ---------- BASIS-STATISTIKEN ----------
     const sentenceLengths = sentences.map((s) => s.wordCount)
     const meanSentenceLength = avg(sentenceLengths)
     const varianceSentenceLength = variance(sentenceLengths, meanSentenceLength)
     const stdSentenceLength = Math.sqrt(varianceSentenceLength)
 
-    const uniqueCount = new Set(
-      words.map((w) => w.text.toLowerCase())
-    ).size
-
+    const uniqueCount = new Set(words.map((w) => w.text.toLowerCase())).size
     const punctuationMatches = (text.match(/[.,;:!?]/g) || []).length
     const exclamations = (text.match(/!/g) || []).length
     const questions = (text.match(/\?/g) || []).length
-    const capsTokens = words.filter(
-      (w) => w.len >= 3 && /^[A-ZÄÖÜ]+$/.test(w.text)
-    ).length
+    const capsTokens = words.filter((w) => w.len >= 3 && /^[A-ZÄÖÜ]+$/.test(w.text)).length
 
     const lexicalDiversity = words.length ? uniqueCount / words.length : 0
     const punctuationPerWord = words.length ? punctuationMatches / words.length : 0
-    const emphasisScore = Math.min(
-      1,
-      (exclamations + capsTokens * 0.5) / Math.max(1, sentences.length)
-    )
+    const emphasisScore = Math.min(1, (exclamations + capsTokens * 0.5) / Math.max(1, sentences.length))
     const questionScore = Math.min(1, questions / Math.max(1, sentences.length))
 
     const stats = {
@@ -59,16 +55,23 @@ export async function analyzeText(text) {
       sentenceCount: sentences.length,
       avgWordLength: words.length ? avg(words.map((w) => w.len)) : 0,
       uniqueWords: uniqueCount,
-      lexicalDiversity,          // ~ Type-Token-Ratio
-      emphasisScore,             // ! + ALL CAPS
-      questionScore,             // ?-Intensität
+      lexicalDiversity,
+      emphasisScore,
+      questionScore,
       meanSentenceLength,
       varianceSentenceLength,
       stdSentenceLength,
       punctuationPerWord,
+      
+      // NEUE METRIKEN
+      rhythm,              // { regularity, variance, pattern }
+      repetition,          // { score, clusters, dominant }
+      syntaxComplexity,    // { score, subordination, nesting }
+      coherence,           // { score, transitions, flow }
+      style,               // { formality, abstract, narrative }
     }
 
-    // ---------- Satzweises Sentiment + Kalibrierung ----------
+    // ---------- SENTIMENT ----------
     const sentTexts = sentences.map((s) => s.text.slice(0, 400))
     const signedScores = await batchedSentiment(sentimentModel, sentTexts)
     const meanSigned = signedScores.length ? avg(signedScores) : 0
@@ -77,54 +80,35 @@ export async function analyzeText(text) {
     if (meanSigned > NEUTRAL_MARGIN) aggLabel = 'POSITIVE'
     else if (meanSigned < -NEUTRAL_MARGIN) aggLabel = 'NEGATIVE'
 
-    const sentimentScore = clamp01(
-      (Math.abs(meanSigned) - NEUTRAL_MARGIN) / (1 - NEUTRAL_MARGIN)
-    )
+    const sentimentScore = clamp01((Math.abs(meanSigned) - NEUTRAL_MARGIN) / (1 - NEUTRAL_MARGIN))
     const sentiment = { label: aggLabel, score: sentimentScore }
 
-    // schreibe pro Satz den gemessenen Wert zurück (für lokale Modulationen)
     sentences.forEach((s, i) => {
-      s.signedSentiment = signedScores[i] ?? 0         // [-1..+1]
-      s.score = Math.abs(s.signedSentiment)            // 0..1
+      s.signedSentiment = signedScores[i] ?? 0
+      s.score = Math.abs(s.signedSentiment)
     })
 
-    // ---------- Dokument-Embedding ----------
+    // ---------- EMBEDDINGS ----------
     const truncatedText = text.slice(0, 2000)
-    const docEmbTensor = await embeddingModel(truncatedText, {
-      pooling: 'mean',
-      normalize: true,
-    })
+    const docEmbTensor = await embeddingModel(truncatedText, { pooling: 'mean', normalize: true })
     const embedding = Array.from(docEmbTensor.data || [])
     const topicSlice = embedding.slice(0, EMBEDDING_SLICE_DIMS)
     const topicHash = stableHash(topicSlice)
 
-    // ---------- Token-Embeddings (Teilmenge) + Salience ----------
-    // Wir betten maximal die ersten N nicht-PUNCT Tokens (Performance!).
     const tokenTextsForEmb = words.slice(0, MAX_TOKENS_EMBED).map((t) => t.text)
-    const tokenEmbOutputs = await batchedEmbeddings(
-      embeddingModel,
-      tokenTextsForEmb
-    )
+    const tokenEmbOutputs = await batchedEmbeddings(embeddingModel, tokenTextsForEmb)
 
-    // Cosinus-Ähnlichkeit → Salience
     const sims = tokenEmbOutputs.map((e) => cosineSim(embedding, e))
     const { min: simMin, max: simMax } = minMax(sims)
-    const normSims = sims.map((v) =>
-      simMax > simMin ? (v - simMin) / (simMax - simMin) : 0.5
-    )
-
-    // Embedding-Slice pro Token (kompakt)
+    const normSims = sims.map((v) => simMax > simMin ? (v - simMin) / (simMax - simMin) : 0.5)
     const tokenEmbSlices = tokenEmbOutputs.map((e) => e.slice(0, EMBEDDING_SLICE_DIMS))
 
-    // Tokens anreichern (salience, sentenceId, kurze Embedding-Slices)
     let embIdx = 0
     const sentenceBoundaries = sentences.map((s) => [s.start, s.end])
     const tokensEnriched = tokens.map((t) => {
       const sentenceId = findSentenceId(sentenceBoundaries, t.charStart, t.charEnd)
       const base = { ...t, sentenceId }
       if (t.typeTag === 'PUNCT') return { ...base, salience: 0 }
-
-      // nur für die ersten MAX_TOKENS_EMBED Wörter mit Embedding
       if (embIdx < tokenEmbSlices.length) {
         const salience = normSims[embIdx]
         const emb = tokenEmbSlices[embIdx]
@@ -134,7 +118,7 @@ export async function analyzeText(text) {
       return { ...base, salience: 0 }
     })
 
-    // ---------- Emotions-Hints (transparent, regelbasiert) ----------
+    // ---------- EMOTIONS ----------
     const lower = text.toLowerCase()
     const emotionHints = {
       anger: /(wut|angry|furious|rage|zorn)/.test(lower) ? 1 : 0,
@@ -144,16 +128,15 @@ export async function analyzeText(text) {
     }
 
     return {
-      embedding,                       // Dokument-Vektor
-      sentiment,                       // kalibriert, neutralfähig
-      stats,                           // global interpretierbar
+      embedding,
+      sentiment,
+      stats,
       hints: { emotionHints, topicHash },
-      sentences,                       // lokale Struktur + satzweise Scores
-      tokens: tokensEnriched,          // jedes Wort/Punkt bekommt Bedeutung
+      sentences,
+      tokens: tokensEnriched,
     }
   } catch (error) {
     console.error('Text analysis failed:', error)
-    // Fallback – minimal, aber kompatibel
     const safeTokens = tokenizeWithOffsets(text)
     const safeSentences = splitSentencesWithOffsets(text)
     return {
@@ -171,6 +154,11 @@ export async function analyzeText(text) {
         varianceSentenceLength: 0,
         stdSentenceLength: 0,
         punctuationPerWord: 0,
+        rhythm: { regularity: 0.5, variance: 0, pattern: 'uniform' },
+        repetition: { score: 0, clusters: [], dominant: null },
+        syntaxComplexity: { score: 0.5, subordination: 0, nesting: 0 },
+        coherence: { score: 0.5, transitions: 0, flow: 'neutral' },
+        style: { formality: 0.5, abstract: 0.5, narrative: 0.5 },
       },
       hints: { emotionHints: { anger: 0, joy: 0, sadness: 0, fear: 0 }, topicHash: 1 },
       sentences: safeSentences.map((s) => ({ ...s, signedSentiment: 0, score: 0 })),
@@ -179,10 +167,149 @@ export async function analyzeText(text) {
   }
 }
 
-/* ------------------ Helpers: NLP-Light ------------------ */
+/* ------------------ NEUE ANALYSE-FUNKTIONEN ------------------ */
+
+function analyzeRhythm(words, sentences) {
+  if (sentences.length < 2) return { regularity: 0.5, variance: 0, pattern: 'uniform' }
+  
+  // Wortlängen-Muster pro Satz
+  const patterns = sentences.map(s => {
+    const sentWords = words.filter(w => w.sentenceId === s.id)
+    return sentWords.map(w => w.len)
+  })
+  
+  // Berechne Varianz der Satzrhythmen
+  const rhythmScores = patterns.map(p => {
+    if (p.length < 2) return 0
+    const v = variance(p, avg(p))
+    return Math.sqrt(v)
+  })
+  
+  const avgRhythm = avg(rhythmScores)
+  const rhythmVar = variance(rhythmScores, avgRhythm)
+  const regularity = clamp01(1 - Math.min(1, rhythmVar / 2))
+  
+  // Erkenne Muster: gleichmäßig, pulsierend, chaotisch
+  let pattern = 'uniform'
+  if (rhythmVar > 1.5) pattern = 'chaotic'
+  else if (avgRhythm > 2) pattern = 'pulsing'
+  else if (regularity > 0.7) pattern = 'regular'
+  
+  return {
+    regularity: clamp01(regularity),
+    variance: clamp01(rhythmVar / 3),
+    pattern
+  }
+}
+
+function analyzeRepetition(words) {
+  const wordMap = new Map()
+  const lowerWords = words.map(w => w.text.toLowerCase())
+  
+  lowerWords.forEach(w => {
+    wordMap.set(w, (wordMap.get(w) || 0) + 1)
+  })
+  
+  const repeated = Array.from(wordMap.entries())
+    .filter(([_, count]) => count > 1)
+    .sort((a, b) => b[1] - a[1])
+  
+  const totalRep = repeated.reduce((sum, [_, count]) => sum + count, 0)
+  const repScore = lowerWords.length ? totalRep / lowerWords.length : 0
+  
+  // Finde Cluster (aufeinanderfolgende Wiederholungen)
+  const clusters = []
+  for (let i = 0; i < lowerWords.length - 1; i++) {
+    if (lowerWords[i] === lowerWords[i + 1]) {
+      clusters.push({ word: lowerWords[i], position: i })
+    }
+  }
+  
+  return {
+    score: clamp01(repScore),
+    clusters,
+    dominant: repeated[0]?.[0] || null
+  }
+}
+
+function analyzeSyntaxComplexity(sentences, tokens) {
+  if (sentences.length === 0) return { score: 0.5, subordination: 0, nesting: 0 }
+  
+  // Zähle Kommas und Konjunktionen als Proxy für Verschachtelung
+  const commas = tokens.filter(t => t.text === ',').length
+  const conjunctions = tokens.filter(t => 
+    /^(und|oder|aber|denn|weil|dass|obwohl|wenn|and|or|but|because|that|although|if)$/i.test(t.text)
+  ).length
+  
+  const avgCommasPerSent = sentences.length ? commas / sentences.length : 0
+  const avgConjPerSent = sentences.length ? conjunctions / sentences.length : 0
+  
+  const subordination = clamp01(avgConjPerSent / 2)
+  const nesting = clamp01(avgCommasPerSent / 3)
+  const complexityScore = clamp01((subordination + nesting) / 2)
+  
+  return {
+    score: complexityScore,
+    subordination,
+    nesting
+  }
+}
+
+function analyzeSentenceCoherence(sentences) {
+  if (sentences.length < 2) return { score: 0.5, transitions: 0, flow: 'neutral' }
+  
+  // Übergangswörter
+  const transitionWords = /^(außerdem|jedoch|deshalb|daher|folglich|zudem|dennoch|also|furthermore|however|therefore|moreover|thus)/i
+  
+  let transitions = 0
+  sentences.forEach(s => {
+    if (transitionWords.test(s.text.trim())) transitions++
+  })
+  
+  const transitionScore = clamp01(transitions / sentences.length)
+  
+  // Längenvarianz als Proxy für Flow
+  const lengths = sentences.map(s => s.wordCount)
+  const lengthVar = variance(lengths, avg(lengths))
+  const flowScore = clamp01(1 - Math.min(1, lengthVar / 50))
+  
+  const coherenceScore = (transitionScore * 0.4 + flowScore * 0.6)
+  
+  let flow = 'neutral'
+  if (coherenceScore > 0.7) flow = 'smooth'
+  else if (coherenceScore < 0.3) flow = 'fragmented'
+  
+  return {
+    score: coherenceScore,
+    transitions: transitionScore,
+    flow
+  }
+}
+
+function analyzeStyle(text, words, sentences) {
+  // Formalität: lange Wörter + wenig Kontraktionen
+  const avgWordLen = words.length ? avg(words.map(w => w.len)) : 0
+  const contractions = (text.match(/'(ll|ve|re|s|t|d|m)/g) || []).length
+  const formality = clamp01(avgWordLen / 8 - contractions / words.length)
+  
+  // Abstraktheit: Substantive vs. Verben (heuristisch)
+  const upperWords = words.filter(w => w.isUpper && w.len > 2).length
+  const abstract = clamp01(upperWords / Math.max(1, words.length) * 2)
+  
+  // Narrativität: Vergangenheitsformen (heuristisch)
+  const pastTense = (text.match(/\b\w+(ed|te|ten|ete|eten)\b/gi) || []).length
+  const narrative = clamp01(pastTense / Math.max(1, words.length) * 3)
+  
+  return {
+    formality: clamp01(formality),
+    abstract: clamp01(abstract),
+    narrative: clamp01(narrative)
+  }
+}
+
+/* ------------------ HELPERS ------------------ */
 
 function splitSentencesWithOffsets(text) {
-  // Satzende: ., !, ?, … gefolgt von Leerraum/Zeilenumbruch
   const regex = /[^.!?…]+[.!?…]+|\S+$/g
   const result = []
   let m
@@ -200,10 +327,10 @@ function splitSentencesWithOffsets(text) {
 
 function tokenizeWithOffsets(text) {
   const tokens = []
-  const regex = /([A-Za-zÄÖÜäöüß]+(?:'[A-Za-zÄÖÜäöüß]+)?)|(\d+[.,]?\d*)|([.,;:!?()\[\]{}"“”‚‘'…])|(\S)/g
+  const regex = /([A-Za-zÄÖÜäöüß]+(?:'[A-Za-zÄÖÜäöüß]+)?)|(\d+[.,]?\d*)|([.,;:!?()\[\]{}"„"‚''…])|(\S)/g
   let m
   while ((m = regex.exec(text)) !== null) {
-    const [full, word, number, punct, other] = m
+    const [full, word, number, punct] = m
     const tokenText = full
     const charStart = m.index
     const charEnd = charStart + full.length
@@ -213,45 +340,28 @@ function tokenizeWithOffsets(text) {
     const len = full.length
     const isUpper = /^[A-ZÄÖÜ]/.test(full)
     const hasPunct = /[.,;:!?]/.test(full)
-    const typeTag = isPunct
-      ? 'PUNCT'
-      : isNumber
-      ? (isDateLike(full) ? 'DATE' : 'NUMBER')
-      : isUrlLike(full)
-      ? 'URL'
-      : isWord && isNameLike(full)
-      ? 'NAME'
+    const typeTag = isPunct ? 'PUNCT'
+      : isNumber ? (isDateLike(full) ? 'DATE' : 'NUMBER')
+      : isUrlLike(full) ? 'URL'
+      : isWord && isNameLike(full) ? 'NAME'
       : 'WORD'
-    tokens.push({
-      text: tokenText,
-      idx: tokens.length,
-      charStart,
-      charEnd,
-      len,
-      isUpper,
-      hasPunct,
-      typeTag,
-    })
+    tokens.push({ text: tokenText, idx: tokens.length, charStart, charEnd, len, isUpper, hasPunct, typeTag })
   }
   return tokens
 }
 
 function isDateLike(s) {
-  // einfache Heuristiken: 12.03.1999, 1999, 30/11/1965, Month names
   if (/^\d{4}$/.test(s) && +s >= 1500 && +s <= 2100) return true
   if (/^\d{1,2}[./-]\d{1,2}([./-]\d{2,4})?$/.test(s)) return true
   if (/^(jan|feb|mär|maerz|mar|apr|mai|jun|jul|aug|sep|sept|oct|okt|nov|dec|dez)\.?$/i.test(s)) return true
   return false
 }
-function isUrlLike(s) {
-  return /^(https?:\/\/|www\.)/i.test(s)
-}
-// ACHTUNG: Deutsch hat Großschreibung für Nomen; wir markieren hier "NAME" nur bei durchgehend Uppercase oder typischen Name-Heuristiken.
+
+function isUrlLike(s) { return /^(https?:\/\/|www\.)/i.test(s) }
+
 function isNameLike(s) {
   return /^[A-ZÄÖÜ][a-zäöüß]+(-[A-ZÄÖÜ][a-zäöüß]+)*$/.test(s) && !isDateLike(s)
 }
-
-/* ------------------ Helpers: Modelle ------------------ */
 
 async function batchedSentiment(sentimentModel, sentences) {
   if (!sentences || sentences.length === 0) return []
@@ -278,21 +388,16 @@ async function batchedEmbeddings(embeddingModel, texts) {
   for (let i = 0; i < texts.length; i += BATCH) {
     const chunk = texts.slice(i, i + BATCH)
     const res = await embeddingModel(chunk, { pooling: 'mean', normalize: true })
-    // transformers.js gibt bei Batch entweder eine Liste von Tensoren oder einen Stack zurück – wir handlen beide Fälle robust:
     if (Array.isArray(res)) {
       for (const r of res) out.push(Array.from(r.data || []))
     } else if (res?.data && Array.isArray(res.data)) {
-      // bereits als Array von Arrays
       for (const row of res.data) out.push(Array.from(row))
     } else if (res?.data) {
-      // einzelner Tensor (passiert bei BATCH=1)
       out.push(Array.from(res.data))
     }
   }
   return out
 }
-
-/* ------------------ Helpers: Mathe ------------------ */
 
 function cosineSim(a, b) {
   const n = Math.min(a.length, b.length)
@@ -347,7 +452,6 @@ function findSentenceId(boundaries, start, end) {
     const [s, e] = boundaries[i]
     if (start >= s && end <= e) return i
   }
-  // fallback: nächster Satz
   let best = 0, bestDist = Infinity
   for (let i = 0; i < boundaries.length; i++) {
     const [s, e] = boundaries[i]

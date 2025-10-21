@@ -1,6 +1,4 @@
-// src/ai/bloomMapper.js
-// Mapping: Analysen -> Visual-Parameter (global + pro Satz/Token)
-// Neu: Mehrfarben-Konzept via HSL (Hue=Thema, Sat=Salience, Light=Valenz)
+// src/ai/bloomMapper.js - ULTRA VARIATIONEN
 import {
   sentimentToColor,
   hslToHex,
@@ -22,74 +20,90 @@ export function mapToBloomData(analysisResult) {
     tokens = [],
   } = analysisResult
 
-  // ---------- robuste Defaults ----------
   const wordCount = Math.max(0, stats.wordCount || 0)
   const sentenceCount = Math.max(1, stats.sentenceCount || 1)
   const uniqueWords = Math.max(1, stats.uniqueWords || 1)
-  const diversity =
-    typeof stats.lexicalDiversity === 'number'
-      ? stats.lexicalDiversity
-      : uniqueWords / Math.max(1, wordCount)
+  const diversity = typeof stats.lexicalDiversity === 'number' ? stats.lexicalDiversity : uniqueWords / Math.max(1, wordCount)
   const varSent = Math.max(0, stats.varianceSentenceLength || 0)
   const meanSent = Math.max(0, stats.meanSentenceLength || 0)
   const emphasis = clamp01(stats.emphasisScore || 0)
   const questionScore = clamp01(stats.questionScore || 0)
+  
+  // NEUE METRIKEN
+  const rhythm = stats.rhythm || { regularity: 0.5, variance: 0, pattern: 'uniform' }
+  const repetition = stats.repetition || { score: 0, clusters: [], dominant: null }
+  const syntaxComplexity = stats.syntaxComplexity || { score: 0.5, subordination: 0, nesting: 0 }
+  const coherence = stats.coherence || { score: 0.5, transitions: 0, flow: 'neutral' }
+  const style = stats.style || { formality: 0.5, abstract: 0.5, narrative: 0.5 }
 
   const topicHash = hints?.topicHash || 1
   const seeded = makeRng(topicHash)
 
-  // ---------- globale Struktur (wie bisher) ----------
+  // ---------- MULTI-GEOMETRIE SYSTEM (Hybrid) ----------
+  const geometryWeights = calculateGeometryWeights(
+    rhythm, repetition, syntaxComplexity, coherence, style, 
+    sentiment, questionScore, emphasis, diversity
+  )
+  
+  // ---------- GLOBALE STRUKTUR (ERWEITERT) ----------
   const embeddingSlice = embedding.slice(0, 12)
-  const baseAngle = 20 + ((embeddingSlice[0] ?? 0) + 1) * 25 // -1..1 -> 20..70
+  const baseAngle = 20 + ((embeddingSlice[0] ?? 0) + 1) * 25
   const hashNudge = (topicHash % 15) * 0.3
   const angle = clamp(baseAngle + hashNudge, 15, 75)
 
+  // Branches: mehr bei Wiederholungen, weniger bei Kohärenz
   const branches = clamp(
-    Math.round(Math.log2(1 + sentenceCount) * 4 + Math.min(3, Math.sqrt(varSent))),
+    Math.round(
+      Math.log2(1 + sentenceCount) * 4 
+      + Math.min(3, Math.sqrt(varSent))
+      + repetition.score * 5
+      - coherence.score * 2
+    ),
     3,
-    16
+    20
   )
 
+  // Complexity: abhängig von Syntax-Komplexität
   const complexity = clamp(
-    Math.round(wordCount / 25 + Math.min(3, Math.sqrt(varSent))),
+    Math.round(
+      wordCount / 25 
+      + Math.min(3, Math.sqrt(varSent))
+      + syntaxComplexity.score * 4
+    ),
     2,
-    7
+    8
   )
 
-  const symmetry = clamp(diversity, 0.4, 0.95)
+  // Symmetry: niedriger bei Chaos, höher bei Rhythmus
+  const symmetry = clamp(
+    diversity * 0.7 + rhythm.regularity * 0.3 - rhythm.variance * 0.2,
+    0.3,
+    0.98
+  )
 
   const sentimentScore = typeof sentiment?.score === 'number' ? sentiment.score : 0.5
   const speed = Math.max(sentimentScore, emphasis)
-  const direction =
-    sentiment?.label === 'POSITIVE' ? 1 : sentiment?.label === 'NEGATIVE' ? -1 : 0
+  const direction = sentiment?.label === 'POSITIVE' ? 1 : sentiment?.label === 'NEGATIVE' ? -1 : 0
   const count = clamp(Math.round(wordCount * 2), 50, 400)
-
-  // Rückwärtskompatible "Basisfarbe" (z. B. für Link-Material)
   const color = sentimentToColor(sentiment, hints?.emotionHints)
 
-  // ---------- NEU: Hue-Konzept pro Satz ----------
-  // Satz-Hue deterministisch aus Embedding + Satzindex (Themenwechsel → Farbwechsel)
+  // ---------- FARB-FUNKTIONEN ----------
   const hueForSentence = (sIndex) => {
     const a = embedding[0] ?? 0
     const b = embedding[1] ?? 0
     const c = embedding[2] ?? 0
-    // Projektion + leichter Offset je Satz
     const h = ((a * 120 + b * 180 + c * 240) * 0.5) + sIndex * 23.7 + (topicHash % 13) * 2.1
     return wrapHue(h)
   }
 
-  // Lightness (Helligkeit) aus Valenz/Sentiment
-  // signedSentiment ∈ [-1..+1] → L ∈ ~[43..67]
   const lightFromValence = (signed) => {
     const v = clamp01(Math.abs(signed || 0))
     const sign = (signed || 0) >= 0 ? 1 : -1
     return clamp(55 + sign * (12 * v), 35, 80)
   }
 
-  // Saturation (Sättigung) aus Salience (Token-Wichtigkeit)
   const satFromSalience = (sal) => clamp(40 + clamp01(sal) * 55, 25, 100)
 
-  // Emotions-Tints leicht einmischen (optional, dezent)
   const applyEmotionTint = (h, s, l, hints) => {
     if (!hints) return [h, s, l]
     let H = h, S = s, L = l
@@ -99,11 +113,10 @@ export function mapToBloomData(analysisResult) {
         H += t.hue; S += t.sat; L += t.light
       }
     }
-    return [wrapHue(H), clamp( S, 0, 100 ), clamp( L, 0, 100 )]
+    return [wrapHue(H), clamp(S, 0, 100), clamp(L, 0, 100)]
   }
 
-  // ---------- NEU: satz- & tokenbasierte Elemente ----------
-  // Sätze -> Ringe (Radius/Thickness ~ Länge/Score, Farbe = HSL(H_thema, ~60, L_valenz))
+  // ---------- RINGE MIT VIELFÄLTIGEN FORMEN ----------
   const rings = sentences.map((s, i) => {
     const r = 1.2 + i * 0.35 + (s.wordCount || 0) * 0.005
     const thickness = 0.02 + clamp01(s.score || 0) * 0.06
@@ -114,6 +127,18 @@ export function mapToBloomData(analysisResult) {
     const [h2, s2, l2] = applyEmotionTint(baseHue, sat, light, hints?.emotionHints)
     const ringColor = hslToHex(h2, s2, l2)
 
+    // RING-TYP basierend auf Satz-Eigenschaften
+    let ringType = 'torus'
+    const sentWords = tokens.filter(t => t.sentenceId === i && t.typeTag !== 'PUNCT')
+    const hasQuestion = s.text.includes('?')
+    const hasExclamation = s.text.includes('!')
+    const isLong = s.wordCount > meanSent * 1.5
+    
+    if (hasQuestion) ringType = 'zigzag'
+    else if (hasExclamation && emphasis > 0.5) ringType = 'star'
+    else if (isLong && syntaxComplexity.score > 0.6) ringType = 'wave'
+    else if (repetition.clusters.some(c => c.position >= s.start && c.position < s.end)) ringType = 'polygon'
+    
     return {
       id: s.id,
       radius: r,
@@ -121,13 +146,19 @@ export function mapToBloomData(analysisResult) {
       tilt: ((topicHash % 23) * 0.03 + i * 0.07) % (Math.PI / 2),
       opacity: 0.25 - Math.min(0.18, i * 0.03),
       color: ringColor,
+      type: ringType,
+      segments: ringType === 'polygon' ? Math.max(5, Math.min(12, Math.floor(s.wordCount / 2))) : 64,
+      amplitude: hasQuestion ? 0.15 : 0.05,
+      frequency: hasQuestion ? 8 : 4,
     }
   })
 
-  // Token-Highlights & Nodes: Mehrfarben (H=Satzzugehörigkeit + Typ-Bias, S=Salience, L=Valenz)
   const tokenWords = tokens.filter((t) => t.typeTag !== 'PUNCT')
 
-  // --- Highlights: Top-N nach Salience
+  // ---------- NODE LAYOUT (GEOMETRIE-ABHÄNGIG) ----------
+  const nodeLayout = determineNodeLayout(geometryWeights, rhythm, coherence, repetition)
+
+  // ---------- HIGHLIGHTS ----------
   const topN = 24
   const highlights = tokenWords
     .filter((t) => typeof t.salience === 'number')
@@ -157,14 +188,40 @@ export function mapToBloomData(analysisResult) {
       }
     })
 
-  // --- Nodes: pro Wort/Token
-  const nodes = tokenWords.map((t) => {
+  // ---------- NODES MIT VARIABLER ANORDNUNG ----------
+  const nodes = tokenWords.map((t, idx) => {
     const s = sentences[t.sentenceId] || { id: 0, wordCount: 1, score: 0, signedSentiment: 0 }
     const ring = rings.find((r) => r.id === (s.id ?? 0))
     const idxInSent = indexWithinSentence(tokens, t.idx, t.sentenceId)
-    const theta =
-      (2 * Math.PI * (idxInSent + 1)) / Math.max(2, s.wordCount) + seeded() * 0.05
-    const radius = (ring ? ring.radius : 1.5) + (seeded() - 0.5) * 0.1
+    
+    // Layout-abhängige Position
+    let theta, radius
+    if (nodeLayout === 'spiral') {
+      const spiralTurns = 3
+      const t_norm = idx / Math.max(1, tokenWords.length - 1)
+      theta = t_norm * Math.PI * 2 * spiralTurns
+      radius = (ring ? ring.radius : 1.5) * (0.7 + t_norm * 0.3)
+    } else if (nodeLayout === 'helix') {
+      const helixTurns = 4
+      const t_norm = idx / Math.max(1, tokenWords.length - 1)
+      theta = t_norm * Math.PI * 2 * helixTurns
+      radius = (ring ? ring.radius : 1.5) + Math.sin(t_norm * Math.PI * 2) * 0.3
+    } else if (nodeLayout === 'cluster') {
+      // Cluster um Wiederholungen
+      const nearCluster = repetition.clusters.find(c => Math.abs(c.position - t.idx) < 5)
+      if (nearCluster) {
+        theta = (2 * Math.PI * idxInSent) / Math.max(2, s.wordCount) + seeded() * 0.3
+        radius = (ring ? ring.radius : 1.5) * (0.9 + seeded() * 0.2)
+      } else {
+        theta = (2 * Math.PI * (idxInSent + 1)) / Math.max(2, s.wordCount) + seeded() * 0.05
+        radius = (ring ? ring.radius : 1.5) + (seeded() - 0.5) * 0.1
+      }
+    } else {
+      // circular (default)
+      theta = (2 * Math.PI * (idxInSent + 1)) / Math.max(2, s.wordCount) + seeded() * 0.05
+      radius = (ring ? ring.radius : 1.5) + (seeded() - 0.5) * 0.1
+    }
+    
     const linkStrength = 0.3 + 0.7 * clamp01(s.score || 0)
 
     const baseHue = hueForSentence(t.sentenceId)
@@ -188,8 +245,7 @@ export function mapToBloomData(analysisResult) {
     }
   })
 
-  // Links: kurze Kanten zwischen aufeinanderfolgenden Tokens eines Satzes
-  // (Material-Farbe bleibt global für Dezenz; pro-Link-Farbe optional später)
+  // ---------- LINKS ----------
   const links = []
   for (let sId = 0; sId < sentences.length; sId++) {
     const sentenceTokens = nodes.filter((n) => n.sentenceId === sId)
@@ -204,8 +260,7 @@ export function mapToBloomData(analysisResult) {
     }
   }
 
-  // Partikel-spezifische Tokenparameter (EnergyParticles im Token-Modus)
-  // HueBias relativ zur Basis-Hue des Partikelsystems (pos=0.5, neg=0.8, neu=0.62)
+  // ---------- PARTIKEL ----------
   const baseHueGlobal = direction > 0 ? 0.5 : direction < 0 ? 0.8 : 0.62
   const tokenParticles = tokenWords.slice(0, 320).map((t) => {
     const s = sentences[t.sentenceId] || { signedSentiment: 0 }
@@ -217,8 +272,8 @@ export function mapToBloomData(analysisResult) {
       tokenIdx: t.idx,
       size: 0.1 + (t.len || 1) * 0.03,
       speed: 0.5 + clamp01(t.salience || 0) * 0.9,
-      hueBias,      // harmoniert mit Partikel-HSL in EnergyParticles
-      direction,    // erbt globale Richtung
+      hueBias,
+      direction,
     }
   })
 
@@ -228,13 +283,18 @@ export function mapToBloomData(analysisResult) {
       complexity,
       symmetry,
       angle,
-      color,        // globale Basis (Fallback/Links)
-
-      // neue, feingranulare Daten
-      rings,        // [{id, radius, thickness, tilt, opacity, color}]
-      nodes,        // [{tokenIdx, radius, theta, size, salience, color, ...}]
-      links,        // [{a: tokenIdx, b: tokenIdx, weight}]
-      highlights,   // Top-Tokens für Marker/Glow
+      color,
+      rings,
+      nodes,
+      links,
+      highlights,
+      
+      // MULTI-GEOMETRIE SYSTEM
+      geometryWeights,  // { tree: 0.8, spiral: 0.3, fractal: 0.1, ... }
+      nodeLayout,       // circular, spiral, helix, cluster, network
+      morphFactor: clamp01(rhythm.variance + syntaxComplexity.score) / 2,
+      twistFactor: clamp01(coherence.score * style.narrative),
+      fragmentationLevel: clamp01(1 - coherence.score),
     },
 
     energy: {
@@ -254,22 +314,143 @@ export function mapToBloomData(analysisResult) {
       questionScore,
       emphasisScore: emphasis,
       topicHash,
+      
+      // NEUE METADATA
+      rhythm,
+      repetition,
+      syntaxComplexity,
+      coherence,
+      style,
+      geometryWeights,
+      nodeLayout,
+      
       mappingNotes: {
-        branches: '∝ log(#Sätze) + Varianz(Satzlänge)',
-        complexity: '∝ Wortanzahl + Varianz(Satzlänge)',
-        symmetry: '∝ Lexikalische Diversität (TTR)',
-        angle: '∝ Embedding[0] + Topic-Hash',
-        color: 'Globaler Fallback; Ringe/NODES nutzen HSL (Hue=Thema, Sat=Salience, Light=Valenz)',
-        energy: 'Speed=max(Sentiment, Betonung), Richtung=Sentiment; Token-HueBias ~ Token-Farbe',
-        rings: 'pro Satz: Radius ∝ Position & Länge, Dicke ∝ Satz-Emotion, Farbe ∝ Thema/Valenz',
-        nodes: 'pro Wort: Position ∝ Satz & Index, Größe ∝ Länge, Farbe ∝ Salience/Valenz/Typ',
-        links: 'lokale Abhängigkeit aufeinanderfolgender Wörter, Gewicht ∝ Satz-Emotion',
+        geometryWeights: 'Multiple geometries blend: tree(balanced), spiral(rhythmic), fractal(complex), helix(narrative), organic(emotional), geometric(formal), web(connected), tornado(intense), molecular(clustered), constellation(fragmented), mandala(meditative)',
+        branches: '∝ log(sentences) + repetition - coherence',
+        complexity: '∝ words + syntax complexity',
+        symmetry: '∝ diversity + rhythm regularity',
+        rings: 'shapes: torus(default), zigzag(questions), star(emphasis), wave(long+complex), polygon(repetition)',
+        nodeLayout: 'circular(default), spiral(rhythmic), helix(narrative), cluster(repetition), network(connected)',
       },
     },
   }
 }
 
-/* ------------------ Helpers ------------------ */
+/* ------------------ MULTI-GEOMETRIE-SYSTEM ------------------ */
+
+function calculateGeometryWeights(rhythm, repetition, syntaxComplexity, coherence, style, sentiment, questionScore, emphasis, diversity) {
+  // Jede Geometrie bekommt einen Weight 0-1
+  // Mehrere können gleichzeitig aktiv sein!
+  
+  return {
+    // L-SYSTEM BAUM: Organisch, natürlich, ausgewogen
+    tree: clamp01(
+      (1 - Math.abs(sentiment?.score - 0.5) * 2) * 0.7 + // neutral sentiment
+      diversity * 0.3 +
+      (style.narrative > 0.3 && style.narrative < 0.7 ? 0.5 : 0)
+    ),
+    
+    // SPIRAL: Rhythmisch, regelmäßig, aufsteigend
+    spiral: clamp01(
+      rhythm.regularity * 0.8 +
+      (rhythm.pattern === 'pulsing' ? 0.6 : 0) +
+      (sentiment?.label === 'POSITIVE' ? 0.4 : 0)
+    ),
+    
+    // FRACTAL CRYSTAL: Komplex, chaotisch, fragmentiert
+    fractal: clamp01(
+      syntaxComplexity.score * 0.7 +
+      (1 - coherence.score) * 0.6 +
+      (style.abstract > 0.5 ? 0.5 : 0)
+    ),
+    
+    // DNA HELIX: Narrativ, fließend, verbunden
+    helix: clamp01(
+      style.narrative * 0.8 +
+      coherence.score * 0.6 +
+      (coherence.flow === 'smooth' ? 0.5 : 0)
+    ),
+    
+    // ORGANIC FLOW: Emotional, frei, wellenartig
+    organic: clamp01(
+      (1 - style.formality) * 0.6 +
+      repetition.score * 0.7 +
+      emphasis * 0.5
+    ),
+    
+    // GEOMETRIC POLYHEDRA: Formal, strukturiert, präzise
+    geometric: clamp01(
+      style.formality * 0.8 +
+      rhythm.regularity * 0.5 +
+      (syntaxComplexity.subordination < 0.3 ? 0.4 : 0)
+    ),
+    
+    // WEB/NETWORK: Verbindungen, Beziehungen, komplex
+    web: clamp01(
+      syntaxComplexity.nesting * 0.7 +
+      (coherence.transitions > 0.5 ? 0.6 : 0) +
+      diversity * 0.4
+    ),
+    
+    // TORNADO/VORTEX: Dynamisch, emotional, intensiv
+    tornado: clamp01(
+      Math.abs(sentiment?.score - 0.5) * 2 * 0.8 + // extreme sentiment
+      emphasis * 0.7 +
+      (rhythm.variance > 0.5 ? 0.5 : 0)
+    ),
+    
+    // MOLECULAR: Clustered, repetitiv, gebündelt
+    molecular: clamp01(
+      repetition.score * 0.9 +
+      (repetition.clusters.length > 3 ? 0.6 : 0) +
+      (1 - coherence.score) * 0.3
+    ),
+    
+    // CONSTELLATION: Fragmente, poetisch, verstreut
+    constellation: clamp01(
+      (coherence.flow === 'fragmented' ? 0.8 : 0) +
+      questionScore * 0.6 +
+      (style.abstract > 0.6 ? 0.5 : 0)
+    ),
+    
+    // MANDALA: Symmetrisch, meditativ, zentriert
+    mandala: clamp01(
+      rhythm.regularity * 0.7 +
+      (sentiment?.label === 'NEUTRAL' ? 0.6 : 0) +
+      (style.formality > 0.4 && style.formality < 0.7 ? 0.5 : 0)
+    ),
+  }
+}
+
+function determineNodeLayout(geometryWeights, rhythm, coherence, repetition) {
+  // Wähle Layout basierend auf dominanter Geometrie
+  const dominant = Object.entries(geometryWeights)
+    .sort((a, b) => b[1] - a[1])[0]
+  
+  if (dominant[1] < 0.3) return 'circular' // zu schwach, default
+  
+  const [name, weight] = dominant
+  
+  if (name === 'spiral' || name === 'tornado') return 'spiral'
+  if (name === 'helix') return 'helix'
+  if (name === 'fractal' || name === 'constellation') return 'cluster'
+  if (name === 'molecular') return 'cluster'
+  if (name === 'web') return 'network'
+  
+  // Fallbacks
+  if (repetition.score > 0.4) return 'cluster'
+  if (rhythm.pattern === 'pulsing') return 'spiral'
+  if (coherence.flow === 'smooth') return 'helix'
+  
+  return 'circular'
+}
+
+function clamp01(x) {
+  if (!Number.isFinite(x)) return 0
+  return Math.max(0, Math.min(1, x))
+}
+
+/* ------------------ HELPERS ------------------ */
 
 function clamp(v, min, max) { return Math.max(min, Math.min(max, v)) }
 
