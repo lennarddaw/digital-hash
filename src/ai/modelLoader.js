@@ -31,18 +31,18 @@ const MODEL_CONFIGS = {
   },
   de: {
     sentiment: {
-      name: '/models/sentiment_de',  // Lokaler Pfad
+      name: 'sentiment_de',  // Relativ zu public/models/
       task: 'sentiment-analysis',
       size: '~420 MB',
       quantized: true,
-      local: true  // Lokal aus public/models
+      local: true
     },
     embedding: {
-      name: '/models/embedding_de',  // Lokaler Pfad
+      name: 'embedding_de',  // Relativ zu public/models/
       task: 'feature-extraction',
       size: '~120 MB',
       quantized: true,
-      local: true  // Lokal aus public/models
+      local: true
     }
   }
 }
