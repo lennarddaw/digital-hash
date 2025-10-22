@@ -31,17 +31,17 @@ const MODEL_CONFIGS = {
   },
   de: {
     sentiment: {
-      name: 'sentiment_de',  // Relativ zu public/models/
+      name: 'sentiment_de',
       task: 'sentiment-analysis',
       size: '~420 MB',
-      quantized: true,
+      quantized: false,  // Nicht-quantifiziert (model.onnx)
       local: true
     },
     embedding: {
-      name: 'embedding_de',  // Relativ zu public/models/
+      name: 'embedding_de',
       task: 'feature-extraction',
       size: '~120 MB',
-      quantized: true,
+      quantized: false,  // Nicht-quantifiziert (model.onnx)
       local: true
     }
   }
