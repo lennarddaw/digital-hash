@@ -1,3 +1,4 @@
+// src/ai/modelLoader.js
 import { pipeline, env } from '@xenova/transformers'
 
 // ===== KONFIGURATION FÜR REMOTE MODELLE (mit Browser Cache) =====
@@ -10,21 +11,83 @@ env.useCustomCache = false
 env.remoteHost = 'https://huggingface.co'
 env.remotePathTemplate = '{model}/resolve/{revision}/'
 
-// Globale Variablen
-let embeddingModel = null
-let sentimentModel = null
+// ===== MODEL KONFIGURATIONEN =====
+const MODEL_CONFIGS = {
+  en: {
+    sentiment: {
+      name: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+      task: 'sentiment-analysis',
+      size: '~260 MB',
+      quantized: true
+    },
+    embedding: {
+      name: 'Xenova/all-MiniLM-L6-v2',
+      task: 'feature-extraction',
+      size: '~90 MB',
+      quantized: true
+    }
+  },
+  de: {
+    sentiment: {
+      name: 'oliverguhr/german-sentiment-bert',
+      task: 'sentiment-analysis',
+      size: '~420 MB',
+      quantized: true
+    },
+    embedding: {
+      name: 'Xenova/paraphrase-multilingual-MiniLM-L12-v2',
+      task: 'feature-extraction',
+      size: '~120 MB',
+      quantized: true
+    }
+  }
+}
+
+// ===== GLOBALE STATE VARIABLEN =====
+let currentLanguage = 'en'
+let loadedModels = {
+  en: { sentiment: null, embedding: null },
+  de: { sentiment: null, embedding: null }
+}
 let isLoading = false
 let loadError = null
 
 /**
- * Lädt beide AI-Modelle von /public/models/
+ * Setzt die aktuelle Sprache und lädt die entsprechenden Modelle
+ * @param {string} language - 'en' oder 'de'
  * @returns {Promise<Object>} { embeddingModel, sentimentModel }
  */
-export async function loadModels() {
+export async function setLanguage(language) {
+  if (!MODEL_CONFIGS[language]) {
+    throw new Error(`Unsupported language: ${language}`)
+  }
+  
+  currentLanguage = language
+  return await loadModels(language)
+}
+
+/**
+ * Gibt die aktuelle Sprache zurück
+ * @returns {string} Aktuelle Sprache ('en' oder 'de')
+ */
+export function getCurrentLanguage() {
+  return currentLanguage
+}
+
+/**
+ * Lädt die Modelle für die angegebene Sprache
+ * @param {string} language - 'en' oder 'de'
+ * @returns {Promise<Object>} { embeddingModel, sentimentModel }
+ */
+export async function loadModels(language = currentLanguage) {
   // Bereits geladen? Return sofort
-  if (embeddingModel && sentimentModel) {
-    console.log('✅ Models already loaded from cache')
-    return { embeddingModel, sentimentModel }
+  const models = loadedModels[language]
+  if (models.sentiment && models.embedding) {
+    console.log(`✅ Models for ${language.toUpperCase()} already loaded from cache`)
+    return { 
+      embeddingModel: models.embedding, 
+      sentimentModel: models.sentiment 
+    }
   }
   
   // Warten falls bereits am Laden
@@ -38,31 +101,39 @@ export async function loadModels() {
         }
       }, 100)
     })
-    return { embeddingModel, sentimentModel }
+    return { 
+      embeddingModel: models.embedding, 
+      sentimentModel: models.sentiment 
+    }
   }
   
   isLoading = true
   loadError = null
   
-  console.log('🚀 Loading AI models from Hugging Face...')
+  const config = MODEL_CONFIGS[language]
+  const langLabel = language === 'en' ? 'English' : 'Deutsch'
+  
+  console.log(`\n${'='.repeat(70)}`)
+  console.log(`🚀 Loading AI Models for ${langLabel}`)
+  console.log(`${'='.repeat(70)}`)
   console.log('📂 Models will be cached in browser storage')
-  console.log('⚠️  First load: ~350 MB download (one-time only!)')
+  console.log('⚠️  First load: Download required (one-time only!)')
   console.log('')
   
   try {
     // ===== 1. SENTIMENT ANALYSIS MODEL =====
-    if (!sentimentModel) {
+    if (!models.sentiment) {
       console.log('\n📊 Loading Sentiment Model...')
-      console.log('   Model: Xenova/distilbert-base-uncased-finetuned-sst-2-english')
-      console.log('   Size: ~260 MB')
+      console.log(`   Model: ${config.sentiment.name}`)
+      console.log(`   Size: ${config.sentiment.size}`)
       
       const sentimentStartTime = performance.now()
       
-      sentimentModel = await pipeline(
-        'sentiment-analysis',
-        'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
+      models.sentiment = await pipeline(
+        config.sentiment.task,
+        config.sentiment.name,
         {
-          quantized: true,
+          quantized: config.sentiment.quantized,
           revision: 'main',
           progress_callback: (progress) => {
             if (progress.status === 'progress') {
@@ -80,18 +151,18 @@ export async function loadModels() {
     }
     
     // ===== 2. EMBEDDING MODEL =====
-    if (!embeddingModel) {
+    if (!models.embedding) {
       console.log('\n🧠 Loading Embedding Model...')
-      console.log('   Model: Xenova/all-MiniLM-L6-v2')
-      console.log('   Size: ~90 MB')
+      console.log(`   Model: ${config.embedding.name}`)
+      console.log(`   Size: ${config.embedding.size}`)
       
       const embeddingStartTime = performance.now()
       
-      embeddingModel = await pipeline(
-        'feature-extraction',
-        'Xenova/all-MiniLM-L6-v2',
+      models.embedding = await pipeline(
+        config.embedding.task,
+        config.embedding.name,
         {
-          quantized: true,
+          quantized: config.embedding.quantized,
           revision: 'main',
           progress_callback: (progress) => {
             if (progress.status === 'progress') {
@@ -109,17 +180,20 @@ export async function loadModels() {
     }
     
     // ===== SUCCESS =====
-    console.log('\n🎉 ALL MODELS LOADED SUCCESSFULLY!')
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
-    console.log('📊 Sentiment Model:', sentimentModel ? '✅ Ready' : '❌ Failed')
-    console.log('🧠 Embedding Model:', embeddingModel ? '✅ Ready' : '❌ Failed')
-    console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n')
+    console.log(`\n🎉 ALL MODELS LOADED SUCCESSFULLY! (${langLabel})`)
+    console.log('─'.repeat(70))
+    console.log('📊 Sentiment Model:', models.sentiment ? '✅ Ready' : '❌ Failed')
+    console.log('🧠 Embedding Model:', models.embedding ? '✅ Ready' : '❌ Failed')
+    console.log('─'.repeat(70) + '\n')
     
-    return { embeddingModel, sentimentModel }
+    return { 
+      embeddingModel: models.embedding, 
+      sentimentModel: models.sentiment 
+    }
     
   } catch (error) {
     console.error('\n❌ FAILED TO LOAD MODELS')
-    console.error('━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+    console.error('─'.repeat(70))
     console.error('Error:', error.message)
     console.error('Stack:', error.stack)
     
@@ -127,7 +201,7 @@ export async function loadModels() {
     console.log('Models are loaded from Hugging Face CDN')
     console.log('and cached in browser (IndexedDB)')
     console.log('')
-    console.log('First load: ~350 MB download (one-time)')
+    console.log('First load: Download required (one-time)')
     console.log('After that: Instant loading from cache')
     console.log('')
     
@@ -141,55 +215,90 @@ export async function loadModels() {
 
 /**
  * Gibt die aktuell geladenen Modelle zurück
- * @returns {Object} { embeddingModel, sentimentModel, isLoading, loadError }
+ * @returns {Object} { embeddingModel, sentimentModel, isLoading, loadError, currentLanguage }
  */
 export function getModels() {
+  const models = loadedModels[currentLanguage]
   return { 
-    embeddingModel, 
-    sentimentModel, 
-    isLoading, 
-    loadError 
+    embeddingModel: models.embedding,
+    sentimentModel: models.sentiment,
+    isLoading,
+    loadError,
+    currentLanguage
   }
 }
 
 /**
  * Gibt den aktuellen Loading-Status zurück
- * @returns {Object} { isLoading, error, modelsLoaded, sentimentReady, embeddingReady }
+ * @returns {Object} { isLoading, error, modelsLoaded, sentimentReady, embeddingReady, currentLanguage, availableLanguages }
  */
 export function getLoadingStatus() {
+  const models = loadedModels[currentLanguage]
   return {
     isLoading,
     error: loadError,
-    modelsLoaded: !!(embeddingModel && sentimentModel),
-    sentimentReady: !!sentimentModel,
-    embeddingReady: !!embeddingModel
+    modelsLoaded: !!(models.embedding && models.sentiment),
+    sentimentReady: !!models.sentiment,
+    embeddingReady: !!models.embedding,
+    currentLanguage,
+    availableLanguages: Object.keys(MODEL_CONFIGS)
+  }
+}
+
+/**
+ * Gibt alle verfügbaren Sprachen zurück
+ * @returns {Array<string>} Array von Sprachcodes
+ */
+export function getAvailableLanguages() {
+  return Object.keys(MODEL_CONFIGS)
+}
+
+/**
+ * Pre-load Modelle für eine Sprache im Hintergrund
+ * @param {string} language - Sprache zum Preloaden
+ */
+export async function preloadLanguage(language) {
+  if (!MODEL_CONFIGS[language]) return
+  
+  console.log(`🔄 Preloading ${language.toUpperCase()} models in background...`)
+  
+  try {
+    await loadModels(language)
+    console.log(`✅ ${language.toUpperCase()} models preloaded successfully`)
+  } catch (error) {
+    console.warn(`⚠️ Failed to preload ${language.toUpperCase()} models:`, error)
   }
 }
 
 /**
  * Test-Funktion zum Überprüfen der Modelle
  */
-export async function testModels() {
-  console.log('🧪 TESTING MODEL SETUP')
-  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━')
+export async function testModels(language = currentLanguage) {
+  console.log(`🧪 TESTING MODEL SETUP (${language.toUpperCase()})`)
+  console.log('─'.repeat(70))
   
   console.log('\n1️⃣ Loading models...')
   try {
-    await loadModels()
+    await loadModels(language)
     console.log('  ✅ Models loaded successfully!')
+    
+    const models = loadedModels[language]
     
     // Test Model Inference
     console.log('\n2️⃣ Testing model inference...')
     
     // Test Sentiment
-    const testText = "This is a wonderful day!"
+    const testText = language === 'de' 
+      ? "Das ist ein wunderschöner Tag!" 
+      : "This is a wonderful day!"
+    
     console.log(`  Testing sentiment with: "${testText}"`)
-    const sentimentResult = await sentimentModel(testText)
+    const sentimentResult = await models.sentiment(testText)
     console.log('  Result:', sentimentResult)
     
     // Test Embedding
     console.log(`  Testing embedding with: "${testText}"`)
-    const embeddingResult = await embeddingModel(testText, { 
+    const embeddingResult = await models.embedding(testText, { 
       pooling: 'mean', 
       normalize: true 
     })
@@ -208,10 +317,15 @@ export async function testModels() {
 if (typeof window !== 'undefined') {
   window.__neuralBloomDebug = {
     loadModels,
+    setLanguage,
+    getCurrentLanguage,
     getModels,
     getLoadingStatus,
-    testModels
+    getAvailableLanguages,
+    preloadLanguage,
+    testModels,
+    MODEL_CONFIGS
   }
   console.log('💡 Debug functions available: window.__neuralBloomDebug')
-  console.log('   Try: await window.__neuralBloomDebug.testModels()')
+  console.log('   Try: await window.__neuralBloomDebug.testModels("de")')
 }

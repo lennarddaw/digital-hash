@@ -8,10 +8,12 @@ import MusicPlayer from './components/MusicPlayer.jsx'
 import useTextAnalysis from './hooks/useTextAnalysis'
 import InspectPanel from './components/InspectPanel.jsx'
 import BackgroundSelector from './components/BackgroundSelector.jsx'
+import ModelSelector from './components/ModelSelector.jsx'
 import FocusModeToggle from './components/FocusModeToggle.jsx'
 import TechnicalInfoPanel from './components/TechnicalInfoPanel.jsx'
 import RealtimeAnalysisPanel from './components/RealtimeAnalysisPanel.jsx'
 import { Activity, X } from 'lucide-react'
+import { getModelLanguagePreference, setModelLanguagePreference } from './utils/storageManager'
 
 export default function App() {
   const [userText, setUserText] = useState('')
@@ -19,8 +21,9 @@ export default function App() {
   const [bgType, setBgType] = useState('solid-dark')
   const [focusMode, setFocusMode] = useState(false)
   const [showAnalysis, setShowAnalysis] = useState(false)
+  const [modelLanguage, setModelLanguage] = useState(() => getModelLanguagePreference())
 
-  const { bloomData, analysisResult, isAnalyzing, isModelLoading } = useTextAnalysis(userText)
+  const { bloomData, analysisResult, isAnalyzing, isModelLoading } = useTextAnalysis(userText, modelLanguage)
 
   const hasBloom = !!bloomData
   const meta = bloomData?.metadata
@@ -32,6 +35,12 @@ export default function App() {
 
   // Unified width for music player and creator line
   const MUSIC_WIDTH = 'w-80' // 20rem; adjust centrally if needed
+
+  // Handle model language change
+  const handleModelLanguageChange = (language) => {
+    setModelLanguage(language)
+    setModelLanguagePreference(language)
+  }
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -101,6 +110,15 @@ export default function App() {
           <p className="text-gray-400 mb-6">
             Transform your thoughts into living structures
           </p>
+
+          {/* Model Language Selector */}
+          <div className="mb-4">
+            <ModelSelector 
+              value={modelLanguage} 
+              onChange={handleModelLanguageChange}
+              disabled={isAnalyzing || isModelLoading}
+            />
+          </div>
 
           {/* Background Selector */}
           <div className="mb-4">

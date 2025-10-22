@@ -2,20 +2,27 @@
 import { useState, useEffect, useRef } from 'react'
 import { analyzeText } from '../ai/textAnalyzer'
 import { mapToBloomData } from '../ai/bloomMapper'
-import { loadModels } from '../ai/modelLoader'
+import { loadModels, setLanguage } from '../ai/modelLoader'
 
-export default function useTextAnalysis(text) {
+export default function useTextAnalysis(text, modelLanguage = 'en') {
   const [bloomData, setBloomData] = useState(null)
   const [analysisResult, setAnalysisResult] = useState(null)
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [isModelLoading, setIsModelLoading] = useState(true)
   const abortRef = useRef(false)
+  const currentLanguageRef = useRef(modelLanguage)
   
-  // Modelle beim Start laden
+  // Modelle beim Start oder bei Sprachwechsel laden
   useEffect(() => {
     let mounted = true
     
-    loadModels()
+    // Nur laden wenn sich die Sprache geändert hat
+    if (currentLanguageRef.current !== modelLanguage) {
+      setIsModelLoading(true)
+      currentLanguageRef.current = modelLanguage
+    }
+    
+    setLanguage(modelLanguage)
       .then(() => {
         if (mounted) setIsModelLoading(false)
       })
@@ -27,7 +34,7 @@ export default function useTextAnalysis(text) {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [modelLanguage])
   
   // Text analysieren mit Debounce
   useEffect(() => {
@@ -79,7 +86,7 @@ export default function useTextAnalysis(text) {
   
   return { 
     bloomData, 
-    analysisResult,  // NEU: Raw analysis data für visualization
+    analysisResult,
     isAnalyzing, 
     isModelLoading 
   }

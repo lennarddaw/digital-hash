@@ -1,5 +1,22 @@
 C:\Users\Admin Howzer AI\projects\hash
+├── examples
+│   ├── churchill.png
+│   ├── churchill.txt
+│   ├── venus_and_adonis.png
+│   ├── venus_and_adonis.txt
+│   ├── venus_and_adonis2.png
+│   ├── w-seminar.png
+│   └── w-seminar.txt
 ├── public
+│   ├── audio
+│   │   ├── baroque-trap-412613.mp3
+│   │   ├── eona-emotional-ambient-pop-351436.mp3
+│   │   ├── gothic-black-metal-music-no-copyright-383590.mp3
+│   │   ├── kugelsicher-by-tremoxbeatz-302838.mp3
+│   │   ├── nocturne-n20-hip-hop-chopin-160904.mp3
+│   │   ├── the-last-point-beat-electronic-digital-394291.mp3
+│   │   ├── trap-basketball-beat-music-412802.mp3
+│   │   └── vivaldi-four-seasons-quotwinterquot-rv-297-arr-for-strings-185593.mp3
 │   └── models
 │       ├── embedding
 │       │   ├── onnx
@@ -8,11 +25,23 @@ C:\Users\Admin Howzer AI\projects\hash
 │       │   ├── tokenizer.json
 │       │   ├── tokenizer_config.json
 │       │   └── vocab.txt
-│       └── sentiment
+│       ├── embedding_de
+│       │   ├── onnx
+│       │   │   └── model.onnx
+│       │   ├── config.json
+│       │   ├── tokenizer.json
+│       │   └── tokenizer_config.json
+│       ├── sentiment
+│       │   ├── onnx
+│       │   │   └── model_quantized.onnx
+│       │   ├── config.json
+│       │   ├── tokenizer.json
+│       │   ├── tokenizer_config.json
+│       │   └── vocab.txt
+│       └── sentiment_de
 │           ├── onnx
-│           │   └── model_quantized.onnx
+│           │   └── model.onnx
 │           ├── config.json
-│           ├── tokenizer.json
 │           ├── tokenizer_config.json
 │           └── vocab.txt
 ├── src
@@ -21,14 +50,28 @@ C:\Users\Admin Howzer AI\projects\hash
 │   │   ├── modelLoader.js
 │   │   └── textAnalyzer.js
 │   ├── components
+│   │   ├── BackgroundLayer.jsx
+│   │   ├── BackgroundSelector.jsx
 │   │   ├── BloomCanvas.jsx
 │   │   ├── ControlPanel.jsx
 │   │   ├── ExportButton.jsx
+│   │   ├── FocusModeToggle.jsx
+│   │   ├── InspectPanel.jsx
 │   │   ├── LoadingState.jsx
+│   │   ├── MusicPlayer.jsx
+│   │   ├── RealtimeAnalysisPanel.jsx
+│   │   ├── TechnicalInfoPanel.jsx
 │   │   └── TextInput.jsx
 │   ├── hooks
 │   │   ├── useTextAnalysis.js
 │   │   └── useThreeScene.js
+│   ├── thirdparty
+│   │   ├── Lightning.css
+│   │   ├── Lightning.jsx
+│   │   ├── LiquidEther.css
+│   │   ├── LiquidEther.jsx
+│   │   ├── Prism.css
+│   │   └── Prism.jsx
 │   ├── three
 │   │   ├── shaders
 │   │   │   ├── bloomFragment.glsl
@@ -51,6 +94,7 @@ C:\Users\Admin Howzer AI\projects\hash
 ├── package.json
 ├── postcss.config.js
 ├── project_structure.txt
+├── PROJEKTBESCHREIBUNG.txt
 ├── README.md
 ├── tailwind.config.js
 ├── tree.txt
