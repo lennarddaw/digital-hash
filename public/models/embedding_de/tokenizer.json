@@ -74,8 +74,7 @@
       {
         "type": "Metaspace",
         "replacement": "▁",
-        "prepend_scheme": "always",
-        "split": true
+        "add_prefix_space": true
       }
     ]
   },
@@ -163,8 +162,7 @@
   "decoder": {
     "type": "Metaspace",
     "replacement": "▁",
-    "prepend_scheme": "always",
-    "split": true
+    "add_prefix_space": true
   },
   "model": {
     "type": "Unigram",
@@ -1000178,7 +1000176,6 @@
         "<mask>",
         0.0
       ]
-    ],
-    "byte_fallback": false
+    ]
   }
 }
