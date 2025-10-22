@@ -19,6 +19,7 @@ export default function App() {
   const [bgType, setBgType] = useState('solid-dark')
   const [focusMode, setFocusMode] = useState(false)
   const [showAnalysis, setShowAnalysis] = useState(false)
+  const [audioData, setAudioData] = useState(null) // NEU: Audio-Reaktivität
 
   const { bloomData, analysisResult, isAnalyzing, isModelLoading } = useTextAnalysis(userText)
 
@@ -32,6 +33,11 @@ export default function App() {
 
   // Unified width for music player and creator line
   const MUSIC_WIDTH = 'w-80' // 20rem; adjust centrally if needed
+
+  // NEU: Audio-Daten Handler
+  const handleAudioData = (data) => {
+    setAudioData(data)
+  }
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -75,6 +81,7 @@ export default function App() {
       {/* 3D Canvas with in-scene background */}
       <BloomCanvas
         bloomData={bloomData}
+        audioData={audioData}
         onInspect={setInspectTarget}
         bgType={bgType}
       />
@@ -217,7 +224,8 @@ export default function App() {
             className={`absolute top-6 right-8 pointer-events-auto
                         flex flex-col items-end
                         transition-transform duration-700 ease-in-out
-                        ${focusMode || showAnalysis ? 'translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
+                        ${focusMode || showAnalysis ?
+                          'translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
           >
             {/* Unified width wrapper */}
             <div className={`${MUSIC_WIDTH} flex flex-col items-stretch`}>
@@ -225,6 +233,7 @@ export default function App() {
               {/* Music Player */}
               <MusicPlayer
                 className={`${MUSIC_WIDTH}`}
+                onAudioData={handleAudioData}
                 playlist={[
                   { 
                     title: 'Ambient Pop', 
@@ -270,81 +279,59 @@ export default function App() {
                 autoPlay={false}
               />
 
-              {/* Subtle Creator Line - Same width as player, centered */}
-              <div className="mt-1 text-[11px] md:text-xs text-gray-400/70 
-                              hover:text-gray-200/90 transition-colors text-center">
-                <span>by {CREATOR_NAME} · </span>
-                <a
-                  href={REPO_URL}
-                  target="_blank"
+              {/* Creator Line */}
+              <div className={`${MUSIC_WIDTH} mt-3 
+                               flex justify-end items-center gap-2 
+                               text-xs text-gray-400 pointer-events-auto`}>
+                <span>by</span>
+                <a 
+                  href={REPO_URL} 
+                  target="_blank" 
                   rel="noopener noreferrer"
-                  className="underline underline-offset-2 decoration-white/20 
-                             hover:decoration-white/60"
-                  title="Open Source Repository"
+                  className="text-cyan-400 hover:text-cyan-300 transition-colors font-mono"
                 >
-                  Open Source on GitHub
+                  @{CREATOR_NAME}
                 </a>
-                <span className="ml-1">· PRs welcome</span>
               </div>
             </div>
           </div>
 
-          {/* Export Button - Bottom Right */}
+          {/* Export + InspectPanel - Bottom Right */}
           <div 
-            className={`absolute bottom-8 right-8 pointer-events-auto
+            className={`absolute bottom-6 right-8 pointer-events-auto
                         transition-transform duration-700 ease-in-out
-                        ${focusMode || showAnalysis ? 'translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
+                        ${focusMode || showAnalysis ?
+                          'translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
           >
-            <ExportButton />
+            <div className="flex flex-col items-end gap-4">
+              
+              {/* Inspect Panel */}
+              {inspectTarget && (
+                <InspectPanel
+                  target={inspectTarget}
+                  onClose={() => setInspectTarget(null)}
+                />
+              )}
+
+              {/* Export Button */}
+              <ExportButton bloomData={bloomData} />
+
+              {/* Technical Info Panel */}
+              <TechnicalInfoPanel bloomData={bloomData} />
+            </div>
           </div>
         </>
       )}
 
-      {/* ============ INSPECT PANEL - Bottom Left ============ */}
-      <div 
-        className={`transition-transform duration-700 ease-in-out
-                    ${focusMode || showAnalysis ? '-translate-x-[calc(100%+2rem)]' : 'translate-x-0'}`}
-      >
-        <InspectPanel 
-          target={inspectTarget} 
-          onClose={() => setInspectTarget(null)} 
-        />
-      </div>
-
-      {/* ============ FULLSCREEN ANALYSIS OVERLAY ============ */}
-      {showAnalysis && hasBloom && (
-        <div 
-          className="absolute inset-0 pointer-events-auto z-50
-                     minimal-fade-in"
-          style={{
-            background: 'linear-gradient(180deg, rgba(10, 10, 10, 0.98) 0%, rgba(0, 0, 0, 0.99) 100%)',
-            backdropFilter: 'blur(10px)',
-            WebkitBackdropFilter: 'blur(10px)',
-          }}
-        >
-          {/* Close Button - Top Right */}
-          <button
-            onClick={() => setShowAnalysis(false)}
-            className="absolute top-6 right-6 p-3 rounded
-                       close-btn-minimal group"
-            title="Close Analysis (ESC)"
-          >
-            <X size={20} />
-            <span className="absolute -bottom-7 right-0 text-[10px] text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity">
-              ESC
-            </span>
-          </button>
-
-          {/* Main Content - Centered, Full Width */}
-          <div className="w-full h-full overflow-y-auto minimal-scroll p-8 flex items-start justify-center">
-            <div className="w-full max-w-7xl minimal-slide-up">
-              <RealtimeAnalysisPanel
-                bloomData={bloomData}
-                analysisResult={analysisResult}
-                isVisible={showAnalysis}
-                onToggle={() => setShowAnalysis(false)}
-              />
-            </div>
+      {/* ============ ANALYSIS PANEL ============ */}
+      {hasBloom && showAnalysis && (
+        <div className="absolute inset-0 overflow-y-auto pointer-events-none nice-scroll">
+          <div className="pointer-events-auto">
+            <RealtimeAnalysisPanel
+              bloomData={bloomData}
+              analysisResult={analysisResult}
+              onClose={() => setShowAnalysis(false)}
+            />
           </div>
         </div>
       )}

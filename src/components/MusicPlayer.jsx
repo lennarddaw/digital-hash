@@ -2,12 +2,14 @@
 /* eslint-disable react/prop-types */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Shuffle, SkipBack, SkipForward, Play, Pause, Repeat, Volume2, VolumeX } from 'lucide-react'
+import useAudioAnalysis from '../hooks/useAudioAnalysis'
 
 export default function MusicPlayer({
   playlist = [],
   startIndex = 0,
   className = '',
   autoPlay = false,
+  onAudioData = null, // NEU: Callback für Audio-Daten
 }) {
   const audioRef = useRef(null)
   const progressRef = useRef(null)
@@ -23,6 +25,16 @@ export default function MusicPlayer({
 
   const track = playlist[index] || {}
   const hasAudio = playlist.length > 0
+
+  // NEU: Audio-Analyse Hook
+  const audioData = useAudioAnalysis(audioRef.current, isPlaying)
+
+  // NEU: Audio-Daten nach außen senden
+  useEffect(() => {
+    if (onAudioData) {
+      onAudioData(audioData)
+    }
+  }, [audioData, onAudioData])
 
   useEffect(() => {
     if (!audioRef.current) return
@@ -82,6 +94,7 @@ export default function MusicPlayer({
         onTimeUpdate={onTimeUpdate}
         onLoadedMetadata={onLoadedMetadata}
         onEnded={onEnded}
+        crossOrigin="anonymous"
       />
 
       {/* Header */}
@@ -130,7 +143,7 @@ export default function MusicPlayer({
         </div>
       </div>
 
-      {/* Volume – EIGENE ZEILE, schwarzer Slider */}
+      {/* Volume — EIGENE ZEILE, schwarzer Slider */}
       <div className="mt-2 flex items-center gap-2">
         <button
           className="p-2 rounded hover:bg-white/10 text-white/80"

@@ -5,9 +5,10 @@ import * as THREE from 'three'
 import BloomGenerator from './BloomGenerator'
 import EnergyParticles from './EnergyParticles'
 
-export default function NeuralBloomScene({ bloomData, onInspect }) {
+export default function NeuralBloomScene({ bloomData, audioData, onInspect }) {
   const groupRef = useRef()
   const ambientLightRef = useRef()
+  const pointLightRef = useRef()
   const [transitionProgress, setTransitionProgress] = useState(0)
 
   // Smooth transition beim Wechsel von Daten
@@ -15,27 +16,53 @@ export default function NeuralBloomScene({ bloomData, onInspect }) {
     if (bloomData) setTransitionProgress(0)
   }, [bloomData])
 
-  // Haupt-Animation Loop
+  // Haupt-Animation Loop mit Audio-Reaktivität
   useFrame((state) => {
     if (!groupRef.current) return
     const time = state.clock.elapsedTime
 
-    // Sanfte Rotation der gesamten Szene
-    groupRef.current.rotation.y = time * 0.05
-    // Leichte Oszillation für lebendigen Effekt
-    groupRef.current.rotation.x = Math.sin(time * 0.3) * 0.1
+    // Audio-Reaktivität
+    const hasAudio = audioData && (audioData.bass > 0.01 || audioData.energy > 0.01)
+    const bassBoost = hasAudio ? audioData.bass : 0
+    const energyBoost = hasAudio ? audioData.energy : 0
+    const midBoost = hasAudio ? audioData.mid : 0
+    const trebleBoost = hasAudio ? audioData.treble : 0
 
-    // Transition-Animation
+    // Rotation: Bass beeinflusst Y-Rotation (langsamer mit Bass-Boost)
+    const baseRotationSpeed = 0.05
+    const rotationSpeed = baseRotationSpeed + (bassBoost * 0.15)
+    groupRef.current.rotation.y = time * rotationSpeed
+
+    // X-Rotation: Oszillation mit Mid-Frequenz-Modulation
+    const baseOscillation = Math.sin(time * 0.3) * 0.1
+    const midInfluence = midBoost * 0.2
+    groupRef.current.rotation.x = baseOscillation + midInfluence
+
+    // Scale: Pulsiert mit Gesamt-Energie
+    const baseScale = 1
+    const energyPulse = energyBoost * 0.3
+    const scale = baseScale + energyPulse
+    
     if (transitionProgress < 1) {
       setTransitionProgress((prev) => Math.min(prev + 0.02, 1))
-      const scale = THREE.MathUtils.lerp(0.5, 1, transitionProgress)
+      const transitionScale = THREE.MathUtils.lerp(0.5, scale, transitionProgress)
+      groupRef.current.scale.setScalar(transitionScale)
+    } else {
       groupRef.current.scale.setScalar(scale)
     }
 
-    // Ambient Light pulsiert leicht
+    // Ambient Light: Pulsiert mit Bass
     if (ambientLightRef.current) {
-      const pulse = Math.sin(time * 2) * 0.1 + 0.3
-      ambientLightRef.current.intensity = pulse
+      const basePulse = Math.sin(time * 2) * 0.1 + 0.3
+      const audioPulse = bassBoost * 0.4
+      ambientLightRef.current.intensity = basePulse + audioPulse
+    }
+
+    // Point Light: Intensität folgt Treble
+    if (pointLightRef.current && bloomData) {
+      const baseIntensity = bloomData.metadata?.sentiment === 'POSITIVE' ? 1.4 : 1.0
+      const trebleInfluence = trebleBoost * 0.6
+      pointLightRef.current.intensity = baseIntensity + trebleInfluence
     }
   })
 
@@ -106,6 +133,10 @@ export default function NeuralBloomScene({ bloomData, onInspect }) {
     Math.sqrt(metadata?.varianceSentenceLength || 0) / 10
   )
 
+  // Audio-Modulation für Energie-Partikel
+  const audioSpeedBoost = audioData ? audioData.energy * 0.8 : 0
+  const audioCountBoost = audioData ? Math.floor(audioData.bass * 30) : 0
+
   // Prüfe Token-Modus (energiegebundene Partikel pro Wort)
   const tokenMode = Array.isArray(energy?.tokens) && energy.tokens.length > 0
 
@@ -114,8 +145,9 @@ export default function NeuralBloomScene({ bloomData, onInspect }) {
       {/* Dynamisches Lighting */}
       <ambientLight ref={ambientLightRef} intensity={0.3} />
 
-      {/* Sentiment-basiertes Point Light mit Frage-getriebener Modulation */}
+      {/* Sentiment-basiertes Point Light mit Audio-Reaktivität */}
       <pointLight
+        ref={pointLightRef}
         position={[0, 2, 0]}
         color={sentimentColor}
         intensity={(isPositive ? 1.4 : 1.0) + questionFactor * 0.4}
@@ -123,8 +155,7 @@ export default function NeuralBloomScene({ bloomData, onInspect }) {
         decay={2}
       />
 
-      {/* Haupt Neural Bloom Struktur
-          - rendert L-System-Basis + Satz-Ringe + Token-Nodes/Links/Highlights */}
+      {/* Haupt Neural Bloom Struktur */}
       <BloomGenerator
         params={{
           ...structure,
@@ -134,26 +165,25 @@ export default function NeuralBloomScene({ bloomData, onInspect }) {
         onInspect={onInspect}
       />
 
-      {/* Energie-Partikel:
-          - Token-Modus: jedes Partikel repräsentiert ein Wort (aus energy.tokens)
-          - Fallback: aggregierte Partikel (count/speed/direction) */}
+      {/* Energie-Partikel mit Audio-Reaktivität */}
       <EnergyParticles
         params={{
           ...energy,
+          speed: (energy.speed || 0.5) + audioSpeedBoost,
+          count: (energy.count || 60) + audioCountBoost,
           questionFactor,
           varianceFactor,
         }}
         onInspect={onInspect}
       />
 
-      {/* Zweite Schicht nur im Aggregatmodus (für Tiefe/Dichte).
-          Im Token-Modus vermeiden wir Doppelung, da tokens bereits alle Wörter abdecken. */}
+      {/* Zweite Schicht nur im Aggregatmodus */}
       {!tokenMode && (
         <EnergyParticles
           params={{
             ...energy,
-            count: Math.floor(energy.count * 0.35),
-            speed: energy.speed * 0.55,
+            count: Math.floor((energy.count || 60) * 0.35) + audioCountBoost,
+            speed: ((energy.speed || 0.5) * 0.55) + (audioSpeedBoost * 0.5),
             questionFactor,
             varianceFactor,
           }}
@@ -167,7 +197,7 @@ export default function NeuralBloomScene({ bloomData, onInspect }) {
         <meshStandardMaterial
           color={sentimentColor}
           emissive={sentimentColor}
-          emissiveIntensity={0.5}
+          emissiveIntensity={0.5 + (audioData?.bass || 0) * 0.5}
           transparent
           opacity={0.7}
         />
@@ -179,7 +209,7 @@ export default function NeuralBloomScene({ bloomData, onInspect }) {
         <meshBasicMaterial
           color={sentimentColor}
           transparent
-          opacity={0.2}
+          opacity={0.2 + (audioData?.mid || 0) * 0.3}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
@@ -190,12 +220,12 @@ export default function NeuralBloomScene({ bloomData, onInspect }) {
         <meshBasicMaterial
           color={sentimentColor}
           transparent
-          opacity={0.4}
+          opacity={0.4 + (audioData?.treble || 0) * 0.2}
           blending={THREE.AdditiveBlending}
         />
       </mesh>
 
-      {/* Komplexitäts-/Volumen-Indikatoren: Ringe aus Wortzahl & Satzlänge */}
+      {/* Komplexitäts-/Volumen-Indikatoren */}
       {metadata?.wordCount > 30 && (
         <>
           {[...Array(Math.min(4, Math.floor(metadata.wordCount / 60)))].map(
@@ -216,7 +246,7 @@ export default function NeuralBloomScene({ bloomData, onInspect }) {
                 <meshBasicMaterial
                   color={sentimentColor}
                   transparent
-                  opacity={0.28 - i * 0.07}
+                  opacity={0.28 - i * 0.07 + (audioData?.energy || 0) * 0.15}
                 />
               </mesh>
             )
@@ -231,7 +261,7 @@ export default function NeuralBloomScene({ bloomData, onInspect }) {
           <meshBasicMaterial
             color={sentimentColor}
             transparent
-            opacity={0.05}
+            opacity={0.05 + (audioData?.amplitude || 0) * 0.1}
             side={THREE.BackSide}
             blending={THREE.AdditiveBlending}
           />
