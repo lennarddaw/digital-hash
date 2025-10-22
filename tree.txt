@@ -27,10 +27,12 @@ C:\Users\Admin Howzer AI\projects\hash
 │       │   └── vocab.txt
 │       ├── embedding_de
 │       │   ├── onnx
-│       │   │   └── model.onnx
+│       │   │   └── model_quantized.onnx
 │       │   ├── config.json
+│       │   ├── special_tokens_map.json
 │       │   ├── tokenizer.json
-│       │   └── tokenizer_config.json
+│       │   ├── tokenizer_config.json
+│       │   └── unigram.json
 │       ├── sentiment
 │       │   ├── onnx
 │       │   │   └── model_quantized.onnx
@@ -40,8 +42,10 @@ C:\Users\Admin Howzer AI\projects\hash
 │       │   └── vocab.txt
 │       └── sentiment_de
 │           ├── onnx
-│           │   └── model.onnx
+│           │   └── model_quantized.onnx
 │           ├── config.json
+│           ├── special_tokens_map.json
+│           ├── tokenizer.json
 │           ├── tokenizer_config.json
 │           └── vocab.txt
 ├── src
@@ -58,6 +62,7 @@ C:\Users\Admin Howzer AI\projects\hash
 │   │   ├── FocusModeToggle.jsx
 │   │   ├── InspectPanel.jsx
 │   │   ├── LoadingState.jsx
+│   │   ├── ModelSelector.jsx
 │   │   ├── MusicPlayer.jsx
 │   │   ├── RealtimeAnalysisPanel.jsx
 │   │   ├── TechnicalInfoPanel.jsx
@@ -87,14 +92,17 @@ C:\Users\Admin Howzer AI\projects\hash
 │   ├── index.css
 │   └── main.jsx
 ├── .env.example
+├── .gitattributes
 ├── .gitignore
 ├── download-models.sh
+├── download_tokenizers.py
 ├── index.html
 ├── package-lock.json
 ├── package.json
 ├── postcss.config.js
 ├── project_structure.txt
 ├── PROJEKTBESCHREIBUNG.txt
+├── quantize_models.py
 ├── README.md
 ├── tailwind.config.js
 ├── tree.txt

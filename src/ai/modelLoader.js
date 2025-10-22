@@ -1,13 +1,13 @@
 // src/ai/modelLoader.js
 import { pipeline, env } from '@xenova/transformers'
 
-// ===== KONFIGURATION FÜR REMOTE MODELLE (mit Browser Cache) =====
-env.allowLocalModels = false
+// ===== KONFIGURATION FÜR LOKALE + REMOTE MODELLE =====
+env.allowLocalModels = true   // WICHTIG: Lokale Modelle erlauben
 env.allowRemoteModels = true
 env.useBrowserCache = true
 env.useCustomCache = false
 
-// CDN für schnellere Downloads
+// CDN für Remote-Downloads
 env.remoteHost = 'https://huggingface.co'
 env.remotePathTemplate = '{model}/resolve/{revision}/'
 
@@ -18,27 +18,31 @@ const MODEL_CONFIGS = {
       name: 'Xenova/distilbert-base-uncased-finetuned-sst-2-english',
       task: 'sentiment-analysis',
       size: '~260 MB',
-      quantized: true
+      quantized: true,
+      local: false  // Remote von Hugging Face
     },
     embedding: {
       name: 'Xenova/all-MiniLM-L6-v2',
       task: 'feature-extraction',
       size: '~90 MB',
-      quantized: true
+      quantized: true,
+      local: false  // Remote von Hugging Face
     }
   },
   de: {
     sentiment: {
-      name: 'oliverguhr/german-sentiment-bert',
+      name: '/models/sentiment_de',  // Lokaler Pfad
       task: 'sentiment-analysis',
       size: '~420 MB',
-      quantized: true
+      quantized: true,
+      local: true  // Lokal aus public/models
     },
     embedding: {
-      name: 'Xenova/paraphrase-multilingual-MiniLM-L12-v2',
+      name: '/models/embedding_de',  // Lokaler Pfad
       task: 'feature-extraction',
       size: '~120 MB',
-      quantized: true
+      quantized: true,
+      local: true  // Lokal aus public/models
     }
   }
 }
@@ -116,8 +120,11 @@ export async function loadModels(language = currentLanguage) {
   console.log(`\n${'='.repeat(70)}`)
   console.log(`🚀 Loading AI Models for ${langLabel}`)
   console.log(`${'='.repeat(70)}`)
-  console.log('📂 Models will be cached in browser storage')
-  console.log('⚠️  First load: Download required (one-time only!)')
+  console.log(`📂 Source: ${config.sentiment.local ? 'Local files' : 'Hugging Face CDN'}`)
+  console.log('💾 Models will be cached in browser storage')
+  if (!config.sentiment.local) {
+    console.log('⚠️  First load: Download required (one-time only!)')
+  }
   console.log('')
   
   try {
@@ -126,6 +133,7 @@ export async function loadModels(language = currentLanguage) {
       console.log('\n📊 Loading Sentiment Model...')
       console.log(`   Model: ${config.sentiment.name}`)
       console.log(`   Size: ${config.sentiment.size}`)
+      console.log(`   Source: ${config.sentiment.local ? 'Local' : 'Remote'}`)
       
       const sentimentStartTime = performance.now()
       
@@ -155,6 +163,7 @@ export async function loadModels(language = currentLanguage) {
       console.log('\n🧠 Loading Embedding Model...')
       console.log(`   Model: ${config.embedding.name}`)
       console.log(`   Size: ${config.embedding.size}`)
+      console.log(`   Source: ${config.embedding.local ? 'Local' : 'Remote'}`)
       
       const embeddingStartTime = performance.now()
       
@@ -198,11 +207,15 @@ export async function loadModels(language = currentLanguage) {
     console.error('Stack:', error.stack)
     
     console.log('\n🔍 DEBUGGING INFO:')
-    console.log('Models are loaded from Hugging Face CDN')
-    console.log('and cached in browser (IndexedDB)')
-    console.log('')
-    console.log('First load: Download required (one-time)')
-    console.log('After that: Instant loading from cache')
+    if (config.sentiment.local) {
+      console.log('Local models should be in:')
+      console.log('  - public/models/sentiment_de/')
+      console.log('  - public/models/embedding_de/')
+      console.log('Files required: config.json, tokenizer.json, onnx/model_quantized.onnx')
+    } else {
+      console.log('Models are loaded from Hugging Face CDN')
+      console.log('and cached in browser (IndexedDB)')
+    }
     console.log('')
     
     loadError = error
@@ -230,7 +243,7 @@ export function getModels() {
 
 /**
  * Gibt den aktuellen Loading-Status zurück
- * @returns {Object} { isLoading, error, modelsLoaded, sentimentReady, embeddingReady, currentLanguage, availableLanguages }
+ * @returns {Object}
  */
 export function getLoadingStatus() {
   const models = loadedModels[currentLanguage]
@@ -247,7 +260,7 @@ export function getLoadingStatus() {
 
 /**
  * Gibt alle verfügbaren Sprachen zurück
- * @returns {Array<string>} Array von Sprachcodes
+ * @returns {Array<string>}
  */
 export function getAvailableLanguages() {
   return Object.keys(MODEL_CONFIGS)
@@ -255,7 +268,7 @@ export function getAvailableLanguages() {
 
 /**
  * Pre-load Modelle für eine Sprache im Hintergrund
- * @param {string} language - Sprache zum Preloaden
+ * @param {string} language
  */
 export async function preloadLanguage(language) {
   if (!MODEL_CONFIGS[language]) return
@@ -271,7 +284,7 @@ export async function preloadLanguage(language) {
 }
 
 /**
- * Test-Funktion zum Überprüfen der Modelle
+ * Test-Funktion
  */
 export async function testModels(language = currentLanguage) {
   console.log(`🧪 TESTING MODEL SETUP (${language.toUpperCase()})`)
@@ -284,10 +297,8 @@ export async function testModels(language = currentLanguage) {
     
     const models = loadedModels[language]
     
-    // Test Model Inference
     console.log('\n2️⃣ Testing model inference...')
     
-    // Test Sentiment
     const testText = language === 'de' 
       ? "Das ist ein wunderschöner Tag!" 
       : "This is a wonderful day!"
@@ -296,7 +307,6 @@ export async function testModels(language = currentLanguage) {
     const sentimentResult = await models.sentiment(testText)
     console.log('  Result:', sentimentResult)
     
-    // Test Embedding
     console.log(`  Testing embedding with: "${testText}"`)
     const embeddingResult = await models.embedding(testText, { 
       pooling: 'mean', 
@@ -313,7 +323,7 @@ export async function testModels(language = currentLanguage) {
   }
 }
 
-// Export für Debug-Zwecke
+// Debug Export
 if (typeof window !== 'undefined') {
   window.__neuralBloomDebug = {
     loadModels,
